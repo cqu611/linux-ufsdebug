@@ -215,15 +215,97 @@ static int ufs_nvm_get_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr ppa,
 static int ufs_nvm_set_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr *ppas,
 				int nr_ppas, int type)
 {
+	struct request_queue *q = nvmdev->q;
+	struct scsi_device *sdev = q->queuedata;
+	struct scsi_cmnd *cmd;
+	unsigned char *cdb;
 	int ret = 0;
+	int i = 0;
 	
+	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
+	if (!cmd)
+		return -ENOMEM;
+
+	/* construct cdb field */
+	cdb = kzalloc(MAX_CDB_SIZE, GFP_KERNEL);
+	cdb[0] = 0xc1;
+	cdb[1] = (unsigned char)type;
+	cdb[2] = (unsigned char)((nr_ppas & 0x0000ff00) >> 8);
+	cdb[3] = (unsigned char)(nr_ppas & 0x000000ff);
+	for (i = 4; i < MAX_CDB_SIZE; i++) {
+		cdb[i] = 0x00;
+	}
+	cmd->cmnd = cdb;
+
+	ret = ufs_submit_sync_cmd(q, cmd, NULL, 0);
+	if (ret)
+		dev_err(sdev, "set bad block table failed (%d)\n", ret);
+	return ret;
+}
+
+int ufs_submit_sync_cmd(struct request_queue *q, struct scsi_cmnd *cmd,
+				void *buffer, unsigned bufflen)
+{
+	struct request *req;
+	int ret;
+
+	req = ufs_nvm_alloc_request(q, cmd);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	if (buffer && bufflen) {
+		ret = blk_rq_map_kern(q, req, buffer, bufflen, GFP_KERNEL);
+		if (ret)
+			goto out;
+	}
+
+	blk_execute_rq(req->q, NULL, req, 0);
+	if (scsi_req(req)->result == DID_OK)
+		return scsi_req(req)->result;
+	else
+		return -EINTR;
+
+out:
+	blk_mq_free_request(req);
 	return ret;
 }
 
 static inline void ufs_nvm_rq2cmd(struct nvm_rq *rqd, struct scsi_device *sdev,
 				struct scsi_cmnd *cmd)
 {
-	
+	unsigned char *cdb;
+	int i;
+
+	cdb = kzalloc(MAX_CDB_SIZE, GFP_KERNEL);
+	/* construct cdb field */
+	if (rqd->opcode == NVM_OP_HBREAD || rqd->opcode == NVM_OP_PREAD) {
+		cdb[0] = 0xc5;
+		cdb[4] = (unsigned char)(rqd->flags >> 8);
+		cdb[5] = (unsigned char)(rqd->flags & 0x00ff);
+	} else if (rqd->opcode == NVM_OP_HBWRITE || rqd->opcode == NVM_OP_PWRITE) {
+		cdb[0] = 0xc4;
+		cdb[4] = (unsigned char)(rqd->flags >> 8);
+		cdb[5] = (unsigned char)(rqd->flags & 0x00ff);
+	} else if (rqd->opcode == NVM_OP_ERASE) {
+		cdb[0] = 0xc3;
+		cdb[4] = 0x00;
+		cdb[5] = 0x00;
+	} else {
+		goto out;
+	}
+	cdb[1] = 0x00;
+	cdb[2] = (unsigned char)(rqd->nr_ppas >> 8);
+	cdb[3] = (unsigned char)(rqd->nr_ppas & 0x00ff);
+	cdb[6] = 0x00;
+	cdb[7] = 0x00;
+	for (i=8; i < MAX_CDB_SIZE; i++) {
+		cdb[i] = 0x00;
+	}
+	cmd->cmnd = cdb;
+
+	return;
+	out:
+	kfree(cdb);	
 }
 
 static void ufs_nvm_end_io(struct request *rq, int error) 
@@ -240,6 +322,8 @@ static void ufs_nvm_end_io(struct request *rq, int error)
 
 static inline bool ufs_nvm_is_write(struct scsi_cmnd *cmd)
 {
+	if (cmd->cmnd[0] == 0xc4)
+		return 1;
 	return 0;
 }
 
@@ -253,7 +337,7 @@ static inline struct request *ufs_nvm_alloc_request(struct request_queue *q,
 	if (IS_ERR(req))
 		return req;
 	req->cmd_flags |= REQ_FAILFAST_DRIVER;
-	// scsi_req(req)->cmd = cmd;
+	scsi_req(req)->cmd = cmd->cmnd;
 
 	return req;
 }
