@@ -328,7 +328,7 @@ static int ufs_nvm_get_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr ppa,
 		return -ENOMEM;
 	/* construct cdb field */
 	cdb[0] = UFS_NVM_ADMIN_GET_BB_TBL;
-	cdb[1] = (unsigned char)(sd->channel);
+	cdb[1] = (unsigned char)sdev->channel;
 	cdb[2] = (unsigned char)ppa.ppa;
 	for (i=3; i < SCSI_MAX_CDBLEN; i++) {
 		cdb[i] = 0x00;
