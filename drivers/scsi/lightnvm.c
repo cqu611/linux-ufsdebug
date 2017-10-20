@@ -30,6 +30,11 @@
 
 #include "sd.h"
 
+#define UFS_NVM_LP_MLC_PAIRS 886
+#define SCSI_MAX_CDBLEN 16
+#define UFS_DEVICE_ID_CQU_QEMU	"qemu-test"	/* Not Used */
+#define UFS_VENDOR_CQU		   	0xeeee
+
 enum ufs_nvm_opcode {
 	UFS_NVM_ADMIN_IDENTITY		= 0xe1,
 	UFS_NVM_ADMIN_GET_L2P_TBL	= 0xe2,
@@ -42,7 +47,6 @@ enum ufs_nvm_opcode {
 	UFS_NVM_OP_ERASE		= 0xc5,
 };
 
-#define UFS_NVM_LP_MLC_PAIRS 886
 struct ufs_nvm_l2p_mlc {
 	__le16			num_pairs;
 	__u8			pairs[UFS_NVM_LP_MLC_PAIRS];
@@ -122,6 +126,11 @@ struct ufs_nvm_bb_tbl {
 	__u8	blk[0];
 
 };
+
+int ufs_submit_sync_cmd(struct request_queue *q, struct scsi_cmnd *cmd,
+				void *buffer, unsigned bufflen);
+static inline struct request *ufs_nvm_alloc_request(struct request_queue *q,
+			struct scsi_cmnd *cmd);
 
 static inline void _ufs_nvm_check_size(void)
 {
@@ -212,7 +221,7 @@ static int ufs_nvm_identity(struct nvm_dev *nvmdev, struct nvm_id *nvmid)
 	nvmid->ver_id = ufs_nvmid->ver_id;
 	nvmid->vmnt = ufs_nvmid->vmnt;
 	nvmid->cap = le32_to_cpu(ufs_nvmid->cap);
-	nvmid->dom = lw32_to_cpu(ufs_nvmid->dom);
+	nvmid->dom = le32_to_cpu(ufs_nvmid->dom);
 	memcpy(&nvmid->ppaf, &ufs_nvmid->ppaf, sizeof(struct nvm_addr_format));
 	ret = init_grps(nvmid, ufs_nvmid);
 
@@ -268,7 +277,7 @@ static int ufs_nvm_get_l2p_tbl(struct nvm_dev *nvmdev, u64 slba, u32 nlb,
 
 		ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, entries, len);
 		if (ret) {
-			dev_err(sdev->sdev_dev, "L2P table transfer failed (%d)\n", ret);
+			dev_err(&(sdev->sdev_dev), "L2P table transfer failed (%d)\n", ret);
 			ret = -EIO;
 			goto out;
 		}
@@ -319,7 +328,7 @@ static int ufs_nvm_get_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr ppa,
 		return -ENOMEM;
 	/* construct cdb field */
 	cdb[0] = UFS_NVM_ADMIN_GET_BB_TBL;
-	cdb[1] = (unsigned char)sd->channel;
+	cdb[1] = (unsigned char)(sd->channel);
 	cdb[2] = (unsigned char)ppa.ppa;
 	for (i=3; i < SCSI_MAX_CDBLEN; i++) {
 		cdb[i] = 0x00;
@@ -332,24 +341,24 @@ static int ufs_nvm_get_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr ppa,
 
 	ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, bb_tbl, tblsz);
 	if (ret) {
-		dev_err(sdev->sdev_dev, "get bad block table failed (%d)\n", ret);
+		dev_err(&(sdev->sdev_dev), "get bad block table failed (%d)\n", ret);
 		ret = -EIO;
 		goto out;
 	}
 	if (bb_tbl->tblid[0] != 'B' || bb_tbl->tblid[1] != 'B' ||
 		bb_tbl->tblid[2] != 'L' || bb_tbl->tblid[3] != 'T') {
-		dev_err(sdev->sdev_dev, "bbt format mismatch\n");
+		dev_err(&(sdev->sdev_dev), "bbt format mismatch\n");
 		ret = -EINVAL;
 		goto out;
 	}
 	if (le16_to_cpu(bb_tbl->verid) != 1) {
 		ret = -EINVAL;
-		dev_err(sdev->sdev_dev, "bbt version not supported\n");
+		dev_err(&(sdev->sdev_dev), "bbt version not supported\n");
 		goto out;
 	}
 	if (le32_to_cpu(bb_tbl->tblks) != nr_blks) {
 		ret = -EINVAL;
-		dev_err(sdev->sdev_dev, "bbt unsuspected blocks returned (%u!=%u)",
+		dev_err(&(sdev->sdev_dev), "bbt unsuspected blocks returned (%u!=%u)",
 				le32_to_cpu(bb_tbl->tblks), nr_blks);
 		goto out;
 	}
@@ -390,7 +399,7 @@ static int ufs_nvm_set_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr *ppas,
 
 	ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, NULL, 0);
 	if (ret)
-		dev_err(sdev->sdev_dev, "set bad block table failed (%d)\n", ret);
+		dev_err(&(sdev->sdev_dev), "set bad block table failed (%d)\n", ret);
 	return ret;
 }
 
@@ -467,7 +476,7 @@ static inline int ufs_nvm_rq2cmd(struct nvm_rq *rqd, struct scsi_device *sdev,
 
 	out:
 	kfree(cdb);	
-	return -EINIT;
+	return -1;
 }
 
 static void ufs_nvm_end_io(struct request *rq, int error) 
@@ -591,9 +600,11 @@ static void ufs_nvm_end_user_vio(struct request *rq, int error)
 static int ufs_nvm_submit_vio(struct scsi_disk *sd, struct nvm_user_vio __user *uvio)
 {
 	struct nvm_user_vio vio;
-	struct scsi_cmnd cmnd;
+	/*
+	struct scsi_cmnd cmd;
 	unsigned int length;
-	int ret;
+	*/
+	int ret = 0;
 
 	if (copy_from_user(&vio, uvio, sizeof(vio)))
 		return -EFAULT;
@@ -618,10 +629,12 @@ static int ufs_nvm_user_vcmd(struct scsi_disk *sd, int admin,
 				struct nvm_passthru_vio __user *uvcmd)
 {
 	struct nvm_passthru_vio vcmd;
+	/*
 	struct scsi_cmnd *cmd;
 	struct request_queue *q;
 	unsigned int timeout = 0;
-	int ret;
+	*/
+	int ret = 0;
 
 	if (copy_from_user(&vcmd, uvcmd, sizeof(vcmd)))
 		return -EFAULT;
@@ -828,8 +841,6 @@ void ufs_nvm_unregister_sysfs(struct scsi_disk *sd)
 	sysfs_remove_group(&disk_to_dev(sd->disk)->kobj, &nvm_dev_attr_group);
 }
 
-#define UFS_DEVICE_ID_CQU_QEMU	"qemu-test"	/* Not Used */
-#define UFS_VENDOR_CQU		   	0xeeee
 int ufs_nvm_supported(u16 vendor_id)
 {
 /*
