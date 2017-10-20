@@ -54,19 +54,19 @@ struct ufs_nvm_l2p_tbl {
 };
 
 struct ufs_nvm_id_group {
-	__u8 			mtype;
+	__u8			mtype;
 	__u8			fmtype;
-	__le16			reserved_0;
+	__le16			res16;
 	__u8			num_ch;
 	__u8			num_lun;
 	__u8			num_pln;
-	__u8			reserved_1;
+	__u8			rsvd1;
 	__le16			num_blk;
 	__le16			num_pg;
 	__le16			fpg_sz;
 	__le16			csecs;
 	__le16			sos;
-	__le16			reserved_2;
+	__le16			rsvd2;
 	__le32			trdt;
 	__le32			trdm;
 	__le32			tprt;
@@ -93,33 +93,33 @@ struct ufs_nvm_addr_format {
 	__u8			pg_len;
 	__u8			sect_offset;
 	__u8			sect_len;
-	__u8			reserved[4];
+	__u8			res[4];
 } __packed;
 
 struct ufs_nvm_id {
 	__u8			ver_id;
 	__u8			vmnt;
 	__u8			cgrps;
-	__u8			reserved_0;
+	__u8			res;
 	__le32			cap;
 	__le32			dom;
 	struct ufs_nvm_addr_format ppaf;
-	__u8			reserved_1[228];
+	__u8			resv[228];
 	struct ufs_nvm_id_group groups[4];
 } __packed;
 
 struct ufs_nvm_bb_tbl {
-	__u8			tblid[4];
-	__le16			verid;
-	__le16			revid;
-	__le32			reserved_0;
-	__le32 			nr_blks;
-	__le32			nr_fact;
-	__le32			nr_grown;
-	__le32			nr_dresv;
-	__le32			nr_hresv;
-	__le32			reserved_1[8];
-	__u8			blk[0];
+	__u8	tblid[4];
+	__le16	verid;
+	__le16	revid;
+	__le32	rvsd1;
+	__le32	tblks;
+	__le32	tfact;
+	__le32	tgrown;
+	__le32	tdresv;
+	__le32	thresv;
+	__le32	rsvd2[8];
+	__u8	blk[0];
 
 };
 
@@ -182,33 +182,181 @@ static int ufs_nvm_identity(struct nvm_dev *nvmdev, struct nvm_id *nvmid)
 {
 	struct scsi_device *sdev = nvmdev->q->queuedata;
 	struct ufs_nvm_id *ufs_nvmid;
-	struct scsi_cmnd *cmnd;
-	int ret;
+	struct scsi_cmnd *cmd;
+	unsigned char *cdb;
+	int ret, i;
 
+	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
+	if (!cmd)
+		return -ENOMEM;
+	cdb = kzalloc(SCSI_MAX_CDBLEN, GFP_KERNEL);
+	if (!cdb)
+		return -ENOMEM;
 	ufs_nvmid = kzalloc(sizeof(struct ufs_nvm_id), GFP_KERNEL);
 	if (!ufs_nvmid)
 		return -ENOMEM;
-	cmnd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
-	if (!cmnd)
-		return -ENOMEM;
 
+	cdb[0] = UFS_NVM_ADMIN_IDENTITY;
+	cdb[1] = sdev->channel;
+	for (i=2; i < SCSI_MAX_CDBLEN; i++) {
+		cdb[i] = 0x00;
+	}
 
+	ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, 
+					ufs_nvmid, sizeof(struct ufs_nvm_id));
+	if (ret) {
+		ret = -EIO;
+		goto out;
+	}
+
+	nvmid->ver_id = ufs_nvmid->ver_id;
+	nvmid->vmnt = ufs_nvmid->vmnt;
+	nvmid->cap = le32_to_cpu(ufs_nvmid->cap);
+	nvmid->dom = lw32_to_cpu(ufs_nvmid->dom);
+	memcpy(&nvmid->ppaf, &ufs_nvmid->ppaf, sizeof(struct nvm_addr_format));
+	ret = init_grps(nvmid, ufs_nvmid);
+
+out:
+	kfree(ufs_nvmid);
 	return ret;
 }
 
-static int ufs_nvm_get_l2p_tbl(struct nvm_dev *nvmdev, u64 slab, u32 nlb,
+static int ufs_nvm_get_l2p_tbl(struct nvm_dev *nvmdev, u64 slba, u32 nlb,
 				nvm_l2p_update_fn *update_l2p, void *priv)
 {
+	struct scsi_device *sdev = nvmdev->q->queuedata;
+	struct scsi_cmnd *cmd;
+	u32 len = queue_max_hw_sectors(sdev->request_queue) << 9;
+	u32 nlb_pr_rq = len / sizeof(u64);
+	u64 cmd_slba = slba;
+	void *entries;
+	unsigned char *cdb;
 	int ret = 0;
 
+	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
+	if (!cmd)
+		return -ENOMEM;
+
+	cdb = kzalloc(SCSI_MAX_CDBLEN, GFP_KERNEL);
+	if (!cdb)
+		return -ENOMEM;
+	/* construct cdb field */
+	cdb[0] = UFS_NVM_ADMIN_GET_L2P_TBL;
+	cdb[1] = (unsigned char)sdev->channel;
+	cdb[2] = 0x00;
+	cdb[3] = 0x00;
+	entries = kmalloc(len, GFP_KERNEL);
+	if (!entries)
+		return -ENOMEM;
+
+	while (nlb) {
+		u32 cmd_nlb = min(nlb_pr_rq, nlb);
+		u64 elba = slba + cmd_nlb;
+
+		cdb[4] = (unsigned char)(cmd_nlb >> 24);
+		cdb[5] = (unsigned char)((cmd_nlb >> 16) & 0x000000ff);
+		cdb[6] = (unsigned char)((cmd_nlb >> 8) & 0x000000ff);
+		cdb[7] = (unsigned char)(cmd_nlb & 0x000000ff);
+		cdb[8] = (unsigned char)(cmd_slba >> 56);
+		cdb[9] = (unsigned char)((cmd_slba >> 48) & 0x00000000000000ff);
+		cdb[10] = (unsigned char)((cmd_slba >> 40) & 0x00000000000000ff);
+		cdb[11] = (unsigned char)((cmd_slba >> 32) & 0x00000000000000ff);
+		cdb[12] = (unsigned char)((cmd_slba >> 24) & 0x00000000000000ff);
+		cdb[13] = (unsigned char)((cmd_slba >> 16) & 0x00000000000000ff);
+		cdb[14] = (unsigned char)((cmd_slba >> 8) & 0x00000000000000ff);
+		cdb[15] = (unsigned char)(cmd_slba & 0x00000000000000ff);
+
+		ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, entries, len);
+		if (ret) {
+			dev_err(sdev->sdev_dev, "L2P table transfer failed (%d)\n", ret);
+			ret = -EIO;
+			goto out;
+		}
+
+		if (unlikely(elba > nvmdev->total_secs)) {
+			pr_err("nvm: L2P data from device is out of bounds!\n");
+			ret = -EINVAL;
+			goto out;
+		}
+
+		/* Transform physical address to target address space */
+		nvm_part_to_tgt(nvmdev, entries, cmd_nlb);
+
+		if (update_l2p(cmd_slba, cmd_nlb, entries, priv)) {
+			ret = -EINTR;
+			goto out;
+		}
+
+		cmd_slba += cmd_nlb;
+		nlb -= cmd_nlb;
+	}
+	
+out:
+	kfree(entries);
 	return ret;
 }
 
 static int ufs_nvm_get_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr ppa,
 				u8 *blks)
 {
+	struct request_queue *q = nvmdev->q;
+	struct nvm_geo *geo = &nvmdev->geo;
+	struct scsi_device *sdev = q->queuedata;
+	struct scsi_cmnd *cmd;
+	unsigned char *cdb;
+	struct ufs_nvm_bb_tbl *bb_tbl;
+	int nr_blks = geo->blks_per_lun * geo->plane_mode;
+	int tblsz = sizeof(struct ufs_nvm_bb_tbl) + nr_blks;
 	int ret = 0;
+	int i = 0;
 
+	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
+	if (!cmd)
+		return -ENOMEM;
+
+	cdb = kzalloc(SCSI_MAX_CDBLEN, GFP_KERNEL);
+	if (!cdb)
+		return -ENOMEM;
+	/* construct cdb field */
+	cdb[0] = UFS_NVM_ADMIN_GET_BB_TBL;
+	cdb[1] = (unsigned char)sd->channel;
+	cdb[2] = (unsigned char)ppa.ppa;
+	for (i=3; i < SCSI_MAX_CDBLEN; i++) {
+		cdb[i] = 0x00;
+	}
+	cmd->cmnd = cdb;
+
+	bb_tbl = kzalloc(tblsz, GFP_KERNEL);
+	if (!bb_tbl)
+		return -ENOMEM;
+
+	ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, bb_tbl, tblsz);
+	if (ret) {
+		dev_err(sdev->sdev_dev, "get bad block table failed (%d)\n", ret);
+		ret = -EIO;
+		goto out;
+	}
+	if (bb_tbl->tblid[0] != 'B' || bb_tbl->tblid[1] != 'B' ||
+		bb_tbl->tblid[2] != 'L' || bb_tbl->tblid[3] != 'T') {
+		dev_err(sdev->sdev_dev, "bbt format mismatch\n");
+		ret = -EINVAL;
+		goto out;
+	}
+	if (le16_to_cpu(bb_tbl->verid) != 1) {
+		ret = -EINVAL;
+		dev_err(sdev->sdev_dev, "bbt version not supported\n");
+		goto out;
+	}
+	if (le32_to_cpu(bb_tbl->tblks) != nr_blks) {
+		ret = -EINVAL;
+		dev_err(sdev->sdev_dev, "bbt unsuspected blocks returned (%u!=%u)",
+				le32_to_cpu(bb_tbl->tblks), nr_blks);
+		goto out;
+	}
+
+	memcpy(blks, bb_tbl->blk, geo->blks_per_lun * geo->plane_mode);
+out:
+	kfree(bb_tbl);
 	return ret;
 }
 
@@ -226,20 +374,23 @@ static int ufs_nvm_set_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr *ppas,
 	if (!cmd)
 		return -ENOMEM;
 
+	cdb = kzalloc(SCSI_MAX_CDBLEN, GFP_KERNEL);
+	if (!cdb)
+		return -ENOMEM;
 	/* construct cdb field */
-	cdb = kzalloc(MAX_CDB_SIZE, GFP_KERNEL);
-	cdb[0] = 0xc1;
+	cdb = kzalloc(SCSI_MAX_CDBLEN, GFP_KERNEL);
+	cdb[0] = UFS_NVM_ADMIN_SET_BB_TBL;
 	cdb[1] = (unsigned char)type;
 	cdb[2] = (unsigned char)((nr_ppas & 0x0000ff00) >> 8);
 	cdb[3] = (unsigned char)(nr_ppas & 0x000000ff);
-	for (i = 4; i < MAX_CDB_SIZE; i++) {
+	for (i = 4; i < SCSI_MAX_CDBLEN; i++) {
 		cdb[i] = 0x00;
 	}
 	cmd->cmnd = cdb;
 
-	ret = ufs_submit_sync_cmd(q, cmd, NULL, 0);
+	ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, NULL, 0);
 	if (ret)
-		dev_err(sdev, "set bad block table failed (%d)\n", ret);
+		dev_err(sdev->sdev_dev, "set bad block table failed (%d)\n", ret);
 	return ret;
 }
 
@@ -270,24 +421,34 @@ out:
 	return ret;
 }
 
-static inline void ufs_nvm_rq2cmd(struct nvm_rq *rqd, struct scsi_device *sdev,
+static inline int ufs_nvm_rq2cmd(struct nvm_rq *rqd, struct scsi_device *sdev,
 				struct scsi_cmnd *cmd)
 {
 	unsigned char *cdb;
 	int i;
 
-	cdb = kzalloc(MAX_CDB_SIZE, GFP_KERNEL);
+	cdb = kzalloc(SCSI_MAX_CDBLEN, GFP_KERNEL);
+	if (!cdb)
+		return -ENOMEM;
 	/* construct cdb field */
-	if (rqd->opcode == NVM_OP_HBREAD || rqd->opcode == NVM_OP_PREAD) {
-		cdb[0] = 0xc5;
+	if (rqd->opcode == NVM_OP_HBREAD) {
+		cdb[0] = UFS_NVM_OP_HBREAD;
 		cdb[4] = (unsigned char)(rqd->flags >> 8);
 		cdb[5] = (unsigned char)(rqd->flags & 0x00ff);
-	} else if (rqd->opcode == NVM_OP_HBWRITE || rqd->opcode == NVM_OP_PWRITE) {
-		cdb[0] = 0xc4;
+	} else if (rqd->opcode == NVM_OP_PREAD) {
+		cdb[0] = UFS_NVM_OP_PREAD;
+		cdb[4] = (unsigned char)(rqd->flags >> 8);
+		cdb[5] = (unsigned char)(rqd->flags & 0x00ff);
+	} else if (rqd->opcode == NVM_OP_HBWRITE) {
+		cdb[0] = UFS_NVM_OP_HBWRITE;
+		cdb[4] = (unsigned char)(rqd->flags >> 8);
+		cdb[5] = (unsigned char)(rqd->flags & 0x00ff);
+	} else if (rqd->opcode == NVM_OP_PWRITE) {
+		cdb[0] = UFS_NVM_OP_PWRITE;
 		cdb[4] = (unsigned char)(rqd->flags >> 8);
 		cdb[5] = (unsigned char)(rqd->flags & 0x00ff);
 	} else if (rqd->opcode == NVM_OP_ERASE) {
-		cdb[0] = 0xc3;
+		cdb[0] = UFS_NVM_OP_ERASE;
 		cdb[4] = 0x00;
 		cdb[5] = 0x00;
 	} else {
@@ -298,14 +459,15 @@ static inline void ufs_nvm_rq2cmd(struct nvm_rq *rqd, struct scsi_device *sdev,
 	cdb[3] = (unsigned char)(rqd->nr_ppas & 0x00ff);
 	cdb[6] = 0x00;
 	cdb[7] = 0x00;
-	for (i=8; i < MAX_CDB_SIZE; i++) {
+	for (i=8; i < SCSI_MAX_CDBLEN; i++) {
 		cdb[i] = 0x00;
 	}
 	cmd->cmnd = cdb;
+	return 0;
 
-	return;
 	out:
 	kfree(cdb);	
+	return -EINIT;
 }
 
 static void ufs_nvm_end_io(struct request *rq, int error) 
@@ -456,14 +618,14 @@ static int ufs_nvm_user_vcmd(struct scsi_disk *sd, int admin,
 				struct nvm_passthru_vio __user *uvcmd)
 {
 	struct nvm_passthru_vio vcmd;
-	struct scsi_cmnd *cmnd;
+	struct scsi_cmnd *cmd;
 	struct request_queue *q;
 	unsigned int timeout = 0;
 	int ret;
 
 	if (copy_from_user(&vcmd, uvcmd, sizeof(vcmd)))
 		return -EFAULT;
-	if ((vcmd.opcode != 0xF2) && (!capable(CAP_SYS_ADMIN)))
+	if ((vcmd.opcode != UFS_NVM_ADMIN_GET_BB_TBL) && (!capable(CAP_SYS_ADMIN)))
 		return -EACCES;
 	if (vcmd.flags)
 		return -EINVAL;
