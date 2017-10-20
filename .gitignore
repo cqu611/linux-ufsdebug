@@ -1,3 +1,6 @@
 *.o
 *.ko
 *.cmd
+modules.order
+modules.builtin
+arch/*
