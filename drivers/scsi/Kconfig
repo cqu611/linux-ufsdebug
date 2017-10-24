@@ -42,6 +42,11 @@ config SCSI_DMA
 	bool
 	default n
 
+config SCSI_NULLDEV
+	bool
+	default n
+	depends on SCSI && SCSI_DMA
+
 config SCSI_NETLINK
 	bool
 	default	n
