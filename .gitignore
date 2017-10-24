@@ -18,3 +18,8 @@ scripts/mod/devicetable-offsets.s
 vmlinux
 vmlinux-gdb.py
 
+Module.symvers
+include/config/auto.conf
+include/config/tristate.conf
+include/generated/autoconf.h
+include/generated/compile.h

@@ -3,13 +3,13 @@
 
 
 #ifdef CONFIG_SCSI_UFSHCD
-static int null_ufshcd_register() 
+static int null_ufshcd_register(void) 
 {
 	return -EINVAL;
 }
 
 #else
-static int null_ufshcd_register() 
+static int null_ufshcd_register(void) 
 {
 	pr_err("null_dev: CONFIG_SCSI_UFSHCD needs to be enabled for UFSHCD\n");
 	return -EINVAL;
