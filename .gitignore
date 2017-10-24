@@ -6,3 +6,14 @@ modules.builtin
 arch/*
 *.mod.c
 *.d
+.tmp_*
+
+.config.old
+.version
+System.map
+kernel/bounds.s
+lib/lib.a
+scripts/mod/devicetable-offsets.s
+vmlinux
+vmlinux-gdb.py
+
