@@ -13,6 +13,7 @@ arch/*
 System.map
 kernel/bounds.s
 lib/lib.a
+drivers/firmware/efi/libstub/lib.a
 scripts/mod/devicetable-offsets.s
 vmlinux
 vmlinux-gdb.py
