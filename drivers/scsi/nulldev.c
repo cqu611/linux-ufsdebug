@@ -1,10 +1,14 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 
+#include "ufs/ufshcd.h"
+
 
 #ifdef CONFIG_SCSI_UFSHCD
 static int null_ufshcd_register(void) 
 {
+	int sz = sizeof(ufs_hba);
+	pr_err("------------------------------------------------------\nnull_dev: %d ------------------------------------------------\n-----------------------------------------------\n", sz);
 	return -EINVAL;
 }
 
