@@ -8,6 +8,10 @@
 
 struct ufs_hba *null_hba;
 
+struct pcim_iomap_devres {
+	void __iomem *table[6];
+};
+
 static int null_ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 {
 	return 0;
@@ -25,7 +29,7 @@ static int null_ufshcd_slave_configure(struct scsi_device *sdev)
 
 static void null_ufshcd_slave_destroy(struct scsi_device *sdev)
 {
-	return 0;
+
 }
 
 static int null_ufshcd_change_queue_depth(struct scsi_device *sdev, int depth)
