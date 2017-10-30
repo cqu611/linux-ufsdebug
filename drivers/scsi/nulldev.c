@@ -289,7 +289,6 @@ static int null_ufshcd_register(void)
 	struct device *dev;
 	void __iomem *mmio_base;
 	unsigned int irq = 15;
-	struct pcim_iomap_devres *dr;
 	int err = 0;
 
 	pr_err("NULL_DEV: null_ufshcd_register(), started\n");
@@ -316,8 +315,6 @@ static int null_ufshcd_register(void)
 
 	/* mmio_base init  260 bytes */
 	/////////////////////////////////////////////////////
-	//dr = devres_alloc_node(NULL, sizeof(*dr), GFP_KERNEL, NUMA_NO_NODE);
-	//mmio_base = dr->table;
 	mmio_base = kzalloc(260, GFP_KERNEL);
 	if (!mmio_base) {
 		pr_err("NULL_DEV: null_ufshcd_register(), kzalloc mmio_base failed\n");
@@ -326,6 +323,39 @@ static int null_ufshcd_register(void)
 	}
 	hba->mmio_base = mmio_base;
 	hba->irq = irq;
+
+	/* Init registers */
+	ufshcd_writel(hba, val, REG_CONTROLLER_CAPABILITIES);
+	ufshcd_writel(hba, val, REG_UFS_VERSION);
+	ufshcd_writel(hba, val, REG_CONTROLLER_DEV_ID);					/* Product ID */
+	ufshcd_writel(hba, 0xeeee, REG_CONTROLLER_PROD_ID);				/* Manufacturer ID */
+	ufshcd_writel(hba, val, REG_AUTO_HIBERNATE_IDLE_TIMER);
+	ufshcd_writel(hba, val, REG_INTERRUPT_STATUS);
+	ufshcd_writel(hba, val, REG_INTERRUPT_ENABLE);
+	ufshcd_writel(hba, val, REG_CONTROLLER_STATUS);
+	ufshcd_writel(hba, val, REG_CONTROLLER_ENABLE);
+	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER);
+	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_DATA_LINK_LAYER);
+	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_NETWORK_LAYER);
+	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_TRANSPORT_LAYER);
+	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_DME);
+	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_INT_AGG_CONTROL);
+	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_BASE_L);
+	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_BASE_H);
+	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_DOOR_BELL);
+	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_CLEAR);
+	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_RUN_STOP);
+	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_BASE_L);
+	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_BASE_H);
+	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_DOOR_BELL);
+	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_CLEAR);
+	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_RUN_STOP);
+	ufshcd_writel(hba, val, REG_UIC_COMMAND);
+	ufshcd_writel(hba, val, REG_UIC_COMMAND_ARG_1);
+	ufshcd_writel(hba, val, REG_UIC_COMMAND_ARG_2);
+	ufshcd_writel(hba, val, REG_UIC_COMMAND_ARG_3);
+	ufshcd_writel(hba, val, UFSHCI_REG_SPACE_SIZE);
+	ufshcd_writel(hba, val, REG_UFS_CCAP);
 
 	/* Set descriptor lengths to specification defaults */
 	hba->desc_size.dev_desc = QUERY_DESC_DEVICE_DEF_SIZE;
