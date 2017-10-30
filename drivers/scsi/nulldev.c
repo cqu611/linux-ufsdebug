@@ -135,6 +135,7 @@ static int null_ufshcd_memory_alloc(struct ufs_hba *hba)
 	return 0;
 	
 out:
+	pr_err("NULL_DEV: null_ufshcd_memory_alloc(), failed\n");
 	return -ENOMEM;
 }
 
@@ -204,6 +205,7 @@ static ssize_t null_ufshcd_clkgate_delay_show(struct device *dev, struct device_
 static ssize_t null_ufshcd_clkgate_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) { return 0; }
 static ssize_t null_ufshcd_clkgate_enable_show(struct device *dev, struct device_attribute *attr, char *buf) { return 0; }
 static ssize_t null_ufshcd_clkgate_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) { return 0; }
+static void null_ufshcd_check_errors(struct ufs_hba *hba) {}
 
 
 static void null_ufshcd_init_clk_gating(struct ufs_hba *hba)
@@ -216,18 +218,22 @@ static void null_ufshcd_init_clk_gating(struct ufs_hba *hba)
 	INIT_WORK(&hba->clk_gating.ungate_work, null_ufshcd_ungate_work);
 
 	hba->clk_gating.is_enabled = true;
+	
 	hba->clk_gating.delay_attr.show = null_ufshcd_clkgate_delay_show;
 	hba->clk_gating.delay_attr.store = null_ufshcd_clkgate_delay_store;
 	sysfs_attr_init(&hba->clk_gating.delay_attr.attr);
 	hba->clk_gating.delay_attr.attr.name = "clkgate_delay_ms";
 	hba->clk_gating.delay_attr.attr.mode = 0644;
+	
 	if (device_create_file(hba->dev, &hba->clk_gating.delay_attr))
 		pr_err("NULL_DEV: null_ufshcd_init_clk_gating(), failed to create sysfs for clkgate_delay\n");
+	
 	hba->clk_gating.enable_attr.show = null_ufshcd_clkgate_enable_show;
 	hba->clk_gating.enable_attr.store = null_ufshcd_clkgate_enable_store;
 	sysfs_attr_init(&hba->clk_gating.enable_attr.attr);
 	hba->clk_gating.enable_attr.attr.name = "clkgate_enable";
 	hba->clk_gating.enable_attr.attr.mode = 0644;
+	
 	if (device_create_file(hba->dev, &hba->clk_gating.enable_attr))
 		pr_err("NULL_DEV: null_ufshcd_init_clk_gating(), failed to create sysfs for clkgate_enable\n");
 	pr_err("NULL_DEV: null_ufshcd_init_clk_gating(), completed\n");
@@ -246,7 +252,28 @@ static irqreturn_t null_ufshcd_intr(int irq, void *__hba)
 	if (intr_status)
 		ufshcd_writel(hba, intr_status, REG_INTERRUPT_STATUS);
 	if (enabled_intr_status) {
-		ufshcd_sl_intr(hba, enabled_intr_status);
+		hba->errors = UFSHCD_ERROR_MASK & enabled_intr_status;
+
+		if (hba->errors)
+			null_ufshcd_check_errors(hba);
+		
+		if (enabled_intr_status & UFSHCD_UIC_MASK) {
+			if ((enabled_intr_status & UIC_COMMAND_COMPL) && hba->active_uic_cmd) {
+				hba->active_uic_cmd->argument2 |= (ufshcd_readl(hba, REG_UIC_COMMAND_ARG_2) & MASK_UIC_COMMAND_RESULT);
+				hba->active_uic_cmd->argument3 = ufshcd_readl(hba, REG_UIC_COMMAND_ARG_3);
+				complete(&hba->active_uic_cmd->done);
+			}
+			if ((enabled_intr_status & UFSHCD_UIC_PWR_MASK) && hba->uic_async_done)
+				complete(hba->uic_async_done);
+		}
+
+		if (enabled_intr_status & UTP_TASK_REQ_COMPL) {
+			hba->tm_condition = ufshcd_readl(hba, REG_UTP_TASK_REQ_DOOR_BELL) ^ hba->outstanding_tasks;
+			wake_up(&hba->tm_wq);
+		}
+
+		if (enabled_intr_status & UTP_TRANSFER_REQ_COMPL)
+			//ufshcd_transfer_req_compl(hba);
 		retval = IRQ_HANDLED;
 	}
 	spin_unlock(hba->host->host_lock);
@@ -275,8 +302,7 @@ static int null_ufshcd_register(void)
 	}
 
 	/* alloc Scsi_Host */
-	host = scsi_host_alloc(&null_ufshcd_driver_template,
-				sizeof(struct ufs_hba));
+	host = scsi_host_alloc(&null_ufshcd_driver_template, sizeof(struct ufs_hba));
 	if (!host) {
 		pr_err("NULL_DEV: null_ufshcd_register(), scsi_host_alloc failed\n");
 		err = -ENOMEM;
@@ -357,9 +383,9 @@ static int null_ufshcd_register(void)
 	null_ufshcd_host_memory_configure(hba);
 	host->can_queue = hba->nutrs;
 	host->cmd_per_lun = hba->nutrs;
-	host->max_id = UFSHCD_MAX_ID;
+	host->max_id = 1;
 	host->max_lun = UFS_MAX_LUNS;
-	host->max_channel = UFSHCD_MAX_CHANNEL;
+	host->max_channel = 0;
 	host->unique_id = host->host_no;
 	host->max_cmd_len = MAX_CDB_SIZE;
 	hba->max_pwr_info.is_valid = false;
@@ -407,6 +433,7 @@ static int null_ufshcd_register(void)
 	pr_err("NULL_DEV: null_ufshcd_register(), completed\n");
 	
 out_error:
+	pr_err("NULL_DEV: null_ufshcd_register(), failed\n");
 	return err;
 }
 
