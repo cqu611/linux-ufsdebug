@@ -314,10 +314,11 @@ static int null_ufshcd_register(void)
 	
 	INIT_LIST_HEAD(&hba->clk_list_head);
 
-	/* mmio_base init */
+	/* mmio_base init  260 bytes */
 	/////////////////////////////////////////////////////
-	dr = devres_alloc_node(NULL, sizeof(*dr), GFP_KERNEL, NUMA_NO_NODE);
-	mmio_base = dr->table;
+	//dr = devres_alloc_node(NULL, sizeof(*dr), GFP_KERNEL, NUMA_NO_NODE);
+	//mmio_base = dr->table;
+	mmio_base = kzalloc(260, GFP_KERNEL);
 	if (!mmio_base) {
 		pr_err("NULL_DEV: null_ufshcd_register(), kzalloc mmio_base failed\n");
 		err = -ENODEV;
