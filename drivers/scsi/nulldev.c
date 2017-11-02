@@ -8,10 +8,6 @@
 
 struct ufs_hba *null_hba;
 
-struct pcim_iomap_devres {
-	void __iomem *table[6];
-};
-
 static int null_ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 {
 	pr_err("NULL_DEV: null_ufshcd_queuecommand(), started\n");
