@@ -314,7 +314,6 @@ static int null_ufshcd_register(void)
 	INIT_LIST_HEAD(&hba->clk_list_head);
 
 	/* mmio_base init  260 bytes */
-	/////////////////////////////////////////////////////
 	mmio_base = kzalloc(260, GFP_KERNEL);
 	if (!mmio_base) {
 		pr_err("NULL_DEV: null_ufshcd_register(), kzalloc mmio_base failed\n");
@@ -325,37 +324,39 @@ static int null_ufshcd_register(void)
 	hba->irq = irq;
 
 	/* Init registers */
-	ufshcd_writel(hba, val, REG_CONTROLLER_CAPABILITIES);
-	ufshcd_writel(hba, val, REG_UFS_VERSION);
-	ufshcd_writel(hba, val, REG_CONTROLLER_DEV_ID);					/* Product ID */
-	ufshcd_writel(hba, 0xeeee, REG_CONTROLLER_PROD_ID);				/* Manufacturer ID */
-	ufshcd_writel(hba, val, REG_AUTO_HIBERNATE_IDLE_TIMER);
-	ufshcd_writel(hba, val, REG_INTERRUPT_STATUS);
-	ufshcd_writel(hba, val, REG_INTERRUPT_ENABLE);
-	ufshcd_writel(hba, val, REG_CONTROLLER_STATUS);
-	ufshcd_writel(hba, val, REG_CONTROLLER_ENABLE);
-	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER);
-	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_DATA_LINK_LAYER);
-	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_NETWORK_LAYER);
-	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_TRANSPORT_LAYER);
-	ufshcd_writel(hba, val, REG_UIC_ERROR_CODE_DME);
-	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_INT_AGG_CONTROL);
-	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_BASE_L);
-	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_BASE_H);
-	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_DOOR_BELL);
-	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_CLEAR);
-	ufshcd_writel(hba, val, REG_UTP_TRANSFER_REQ_LIST_RUN_STOP);
-	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_BASE_L);
-	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_BASE_H);
-	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_DOOR_BELL);
-	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_CLEAR);
-	ufshcd_writel(hba, val, REG_UTP_TASK_REQ_LIST_RUN_STOP);
-	ufshcd_writel(hba, val, REG_UIC_COMMAND);
-	ufshcd_writel(hba, val, REG_UIC_COMMAND_ARG_1);
-	ufshcd_writel(hba, val, REG_UIC_COMMAND_ARG_2);
-	ufshcd_writel(hba, val, REG_UIC_COMMAND_ARG_3);
-	ufshcd_writel(hba, val, UFSHCI_REG_SPACE_SIZE);
-	ufshcd_writel(hba, val, REG_UFS_CCAP);
+#define __NOTSET__ 0x0000
+
+	ufshcd_writel(hba, 0x0707101f, REG_CONTROLLER_CAPABILITIES);
+	ufshcd_writel(hba, 0x00000210, REG_UFS_VERSION);						/* UFS Version */
+	ufshcd_writel(hba, __NOTSET__, REG_CONTROLLER_DEV_ID);					/* Product ID */
+	ufshcd_writel(hba, 0xeeee, REG_CONTROLLER_PROD_ID);						/* Manufacturer ID */
+	ufshcd_writel(hba, __NOTSET__, REG_AUTO_HIBERNATE_IDLE_TIMER);
+	ufshcd_writel(hba, __NOTSET__, REG_INTERRUPT_STATUS);
+	ufshcd_writel(hba, __NOTSET__, REG_INTERRUPT_ENABLE);
+	ufshcd_writel(hba, 0x000f, REG_CONTROLLER_STATUS);
+	ufshcd_writel(hba, 0x0001, REG_CONTROLLER_ENABLE);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_ERROR_CODE_DATA_LINK_LAYER);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_ERROR_CODE_NETWORK_LAYER);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_ERROR_CODE_TRANSPORT_LAYER);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_ERROR_CODE_DME);
+	ufshcd_writel(hba, __NOTSET__, REG_UTP_TRANSFER_REQ_INT_AGG_CONTROL);
+	ufshcd_writel(hba, 0x8000, REG_UTP_TRANSFER_REQ_LIST_BASE_L);
+	ufshcd_writel(hba, 0xb000, REG_UTP_TRANSFER_REQ_LIST_BASE_H);
+	ufshcd_writel(hba, __NOTSET__, REG_UTP_TRANSFER_REQ_DOOR_BELL);
+	ufshcd_writel(hba, __NOTSET__, REG_UTP_TRANSFER_REQ_LIST_CLEAR);
+	ufshcd_writel(hba, __NOTSET__, REG_UTP_TRANSFER_REQ_LIST_RUN_STOP);
+	ufshcd_writel(hba, 0xe000, REG_UTP_TASK_REQ_LIST_BASE_L);
+	ufshcd_writel(hba, 0xf800, REG_UTP_TASK_REQ_LIST_BASE_H);
+	ufshcd_writel(hba, __NOTSET__, REG_UTP_TASK_REQ_DOOR_BELL);
+	ufshcd_writel(hba, __NOTSET__, REG_UTP_TASK_REQ_LIST_CLEAR);
+	ufshcd_writel(hba, __NOTSET__, REG_UTP_TASK_REQ_LIST_RUN_STOP);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_COMMAND);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_COMMAND_ARG_1);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_COMMAND_ARG_2);
+	ufshcd_writel(hba, __NOTSET__, REG_UIC_COMMAND_ARG_3);
+	ufshcd_writel(hba, __NOTSET__, UFSHCI_REG_SPACE_SIZE);
+	ufshcd_writel(hba, __NOTSET__, REG_UFS_CCAP);
 
 	/* Set descriptor lengths to specification defaults */
 	hba->desc_size.dev_desc = QUERY_DESC_DEVICE_DEF_SIZE;
