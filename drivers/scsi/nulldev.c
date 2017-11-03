@@ -395,11 +395,13 @@ static int null_ufshcd_register(void)
 
 	/* Set DMA mask */
 	err = dma_set_mask_and_coherent(hba->dev, DMA_BIT_MASK(32));
-	if (err) {
+	/*
+    if (err) {
 		pr_err("NULL_DEV: null_ufshcd_register(), set dma mask failed\n");
 		goto out_error;
 	}
-	
+	*/
+
 	/* Allocate memory for host memory space */
 	err = null_ufshcd_memory_alloc(hba);
 	if (err) {
