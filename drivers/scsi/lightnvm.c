@@ -134,7 +134,7 @@ static inline struct request *ufs_nvm_alloc_request(struct request_queue *q,
 
 static inline void _ufs_nvm_check_size(void)
 {
-	pr_err("LIGHTNVM_UFS: _ufs_nvm_check_size(), started\n");
+	pr_info("LIGHTNVM_UFS: _ufs_nvm_check_size(), started\n");
 	BUILD_BUG_ON(sizeof(struct ufs_nvm_id_group) != 960);
 	BUILD_BUG_ON(sizeof(struct ufs_nvm_addr_format) != 16);
 	BUILD_BUG_ON(sizeof(struct ufs_nvm_id) != 4096);
@@ -146,7 +146,7 @@ static int init_grps(struct nvm_id *nvmid, struct ufs_nvm_id *ufs_nvmid)
 	struct ufs_nvm_id_group *src;
 	struct nvm_id_group *dst;
 
-	pr_err("LIGHTNVM_UFS: init_grps(), started\n");
+	pr_info("LIGHTNVM_UFS: init_grps(), started\n");
 	if (ufs_nvmid->cgrps != 1)
 		return -EINVAL;
 
@@ -179,7 +179,7 @@ static int init_grps(struct nvm_id *nvmid, struct ufs_nvm_id *ufs_nvmid)
 		memcpy(dst->lptbl.id, src->lptbl.id, 8);
 		dst->lptbl.mlc.num_pairs = le16_to_cpu(src->lptbl.mlc.num_pairs);
 		if (dst->lptbl.mlc.num_pairs > UFS_NVM_LP_MLC_PAIRS) {
-			pr_err("LIGHTNVM_UFS: number of MLC pairs not supported\n");
+			pr_info("nvm: number of MLC pairs not supported\n");
 			return -EINVAL;
 		}
 
@@ -197,7 +197,7 @@ static int ufs_nvm_identity(struct nvm_dev *nvmdev, struct nvm_id *nvmid)
 	unsigned char *cdb;
 	int ret, i;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_identity(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_identity(), started\n");
 	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
 	if (!cmd)
 		return -ENOMEM;
@@ -245,7 +245,7 @@ static int ufs_nvm_get_l2p_tbl(struct nvm_dev *nvmdev, u64 slba, u32 nlb,
 	unsigned char *cdb;
 	int ret = 0;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_get_l2p_tbl(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_get_l2p_tbl(), started\n");
 	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
 	if (!cmd)
 		return -ENOMEM;
@@ -287,7 +287,7 @@ static int ufs_nvm_get_l2p_tbl(struct nvm_dev *nvmdev, u64 slba, u32 nlb,
 		}
 
 		if (unlikely(elba > nvmdev->total_secs)) {
-			pr_err("nvm: L2P data from device is out of bounds!\n");
+			pr_info("LIGHTNVM_UFS: L2P data from device is out of bounds!\n");
 			ret = -EINVAL;
 			goto out;
 		}
@@ -323,7 +323,7 @@ static int ufs_nvm_get_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr ppa,
 	int ret = 0;
 	int i = 0;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_get_bb_tbl(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_get_bb_tbl(), started\n");
 	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
 	if (!cmd)
 		return -ENOMEM;
@@ -384,7 +384,7 @@ static int ufs_nvm_set_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr *ppas,
 	int ret = 0;
 	int i = 0;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_set_bb_tbl(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_set_bb_tbl(), started\n");
 	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
 	if (!cmd)
 		return -ENOMEM;
@@ -415,7 +415,7 @@ int ufs_submit_sync_cmd(struct request_queue *q, struct scsi_cmnd *cmd,
 	struct request *req;
 	int ret;
 	
-	pr_err("LIGHTNVM_UFS: ufs_submit_sync_cmd(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), started\n");
 	req = ufs_nvm_alloc_request(q, cmd);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
@@ -443,7 +443,7 @@ static inline int ufs_nvm_rq2cmd(struct nvm_rq *rqd, struct scsi_device *sdev,
 	unsigned char *cdb;
 	int i;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_rq2cmd(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_rq2cmd(), started\n");
 	cdb = kzalloc(SCSI_MAX_CDBLEN, GFP_KERNEL);
 	if (!cdb)
 		return -ENOMEM;
@@ -491,7 +491,7 @@ static void ufs_nvm_end_io(struct request *rq, int error)
 {
 	struct nvm_rq *rqd = rq->end_io_data;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_end_io(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_end_io(), started\n");
 	rqd->ppa_status = le64_to_cpu(scsi_req(rq)->result);
 	rqd->error = scsi_req(rq)->result;
 	nvm_end_io(rqd);
@@ -502,7 +502,7 @@ static void ufs_nvm_end_io(struct request *rq, int error)
 
 static inline bool ufs_nvm_is_write(struct scsi_cmnd *cmd)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_is_write(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_is_write(), started\n");
 	if (cmd->cmnd[0] == 0xc4)
 		return 1;
 	return 0;
@@ -514,7 +514,7 @@ static inline struct request *ufs_nvm_alloc_request(struct request_queue *q,
 	unsigned op = ufs_nvm_is_write(cmd) ? REQ_OP_DRV_OUT : REQ_OP_DRV_IN;
 	struct request *req;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_alloc_request(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_alloc_request(), started\n");
 	req = blk_mq_alloc_request(q, op, 0);
 	if (IS_ERR(req))
 		return req;
@@ -532,7 +532,7 @@ static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 	struct bio *bio = rqd->bio;
 	struct scsi_cmnd *cmd;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_submit_io(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_submit_io(), started\n");
 	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
 	if (!cmd)
 		return -ENOMEM;
@@ -563,7 +563,7 @@ static void *ufs_nvm_create_dma_pool(struct nvm_dev *nvmdev, char *name)
 {
 	struct scsi_device *scsi_dev = nvmdev->q->queuedata;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), started\n");
 	return dma_pool_create(name, &(scsi_dev->host->shost_dev), PAGE_SIZE, PAGE_SIZE, 0);
 }
 
@@ -571,21 +571,21 @@ static void ufs_nvm_destroy_dma_pool(void *pool)
 {
 	struct dma_pool *dma_pool = pool;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_destroy_dma_pool(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_destroy_dma_pool(), started\n");
 	dma_pool_destroy(dma_pool);
 }
 
 static void *ufs_nvm_dev_dma_alloc(struct nvm_dev *nvmdev, void *pool,
 				gfp_t mem_flags, dma_addr_t *dma_handler)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_dev_dma_alloc(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_dev_dma_alloc(), started\n");
 	return dma_pool_alloc(pool, mem_flags, dma_handler);
 }
 
 static void ufs_nvm_dev_dma_free(void * pool, void *addr,
 				dma_addr_t dma_handler)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_dev_dma_free(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_dev_dma_free(), started\n");
 	dma_pool_free(pool, addr, dma_handler);
 }
 
@@ -610,7 +610,7 @@ static struct nvm_dev_ops ufs_nvm_dev_ops = {
 static void ufs_nvm_end_user_vio(struct request *rq, int error)
 {
 	struct completion *waiting = rq->end_io_data;
-	pr_err("LIGHTNVM_UFS: ufs_nvm_end_user_vio(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_end_user_vio(), started\n");
 	complete(waiting);
 }
 
@@ -623,7 +623,7 @@ static int ufs_nvm_submit_vio(struct scsi_disk *sd, struct nvm_user_vio __user *
 	*/
 	int ret = 0;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_submit_vio(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_submit_vio(), started\n");
 	if (copy_from_user(&vio, uvio, sizeof(vio)))
 		return -EFAULT;
 	if (vio.flags)
@@ -640,7 +640,7 @@ static int ufs_nvm_submit_user_cmd(struct request_queue *q,
 				void __user *ppa_buf, unsigned int ppa_len,
 				u32 *result, u64 *status, unsigned int timeout)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_submit_user_cmd(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_submit_user_cmd(), started\n");
 	return 0;
 }
 
@@ -654,7 +654,7 @@ static int ufs_nvm_user_vcmd(struct scsi_disk *sd, int admin,
 	unsigned int timeout = 0;
 	*/
 	int ret = 0;
-	pr_err("LIGHTNVM_UFS: ufs_nvm_user_vcmd(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_user_vcmd(), started\n");
 
 	if (copy_from_user(&vcmd, uvcmd, sizeof(vcmd)))
 		return -EFAULT;
@@ -668,7 +668,7 @@ static int ufs_nvm_user_vcmd(struct scsi_disk *sd, int admin,
 
 int ufs_nvm_ioctl(struct scsi_disk *sd, unsigned int cmd, void __user *arg)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_ioctl(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_ioctl(), started\n");
 	switch (cmd) {
 	case NVME_NVM_IOCTL_ADMIN_VIO:
 		return ufs_nvm_user_vcmd(sd, 1, arg);
@@ -686,13 +686,13 @@ int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
 	struct request_queue *q = sd->device->request_queue;
 	struct nvm_dev *dev;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_register(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_register(), started\n");
 	
 	_ufs_nvm_check_size();
 	/* without node info, so set the node as 0 */
 	dev = kzalloc(sizeof(struct nvm_dev), GFP_KERNEL);
 	if (!dev) {
-		pr_err("LIGHTNVM_UFS: ufs_nvm_register(), nvm_dev is empty, failed\n");
+		pr_info("LIGHTNVM_UFS: ufs_nvm_register(), nvm_dev is empty, failed\n");
 		return -ENOMEM;
 	}
 
@@ -702,15 +702,15 @@ int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
 	dev->private_data = sd;
 	sd->nvmdev = dev;
 
-	pr_err("LIGHTNVM_UFS: ufs_nvm_register(), completed\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_register(), completed\n");
 	return nvm_register(dev);
 }
 
 void ufs_nvm_unregister(struct scsi_disk *sd) 
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_unregister(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister(), started\n");
 	nvm_register(sd->nvmdev);
-	pr_err("LIGHTNVM_UFS: ufs_nvm_unregister(), completed\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister(), completed\n");
 }
 
 static ssize_t nvm_dev_attr_show(struct device *dev,
@@ -722,10 +722,10 @@ static ssize_t nvm_dev_attr_show(struct device *dev,
 	struct nvm_id_group *grp;
 	struct attribute *attr;
 	
-	pr_err("LIGHTNVM_UFS: nvm_dev_attr_show(), started\n");
+	pr_info("LIGHTNVM_UFS: nvm_dev_attr_show(), started\n");
 
 	if (!ndev) {
-		pr_err("LIGHTNVM_UFS: nvm_dev_attr_show(), nvm_dev is empty, failed\n");
+		pr_info("LIGHTNVM_UFS: nvm_dev_attr_show(), nvm_dev is empty, failed\n");
 		return 0;
 	}
 
@@ -798,7 +798,7 @@ static ssize_t nvm_dev_attr_show(struct device *dev,
 				 "Unhandled attr(%s) in `nvm_dev_attr_show`\n",
 				 attr->name);
 	}
-	pr_err("LIGHTNVM_UFS: nvm_dev_attr_show(), completed\n");
+	pr_info("LIGHTNVM_UFS: nvm_dev_attr_show(), completed\n");
 }
 
 #define NVM_DEV_ATTR_RO(_name) \
@@ -866,30 +866,30 @@ static const struct attribute_group nvm_dev_attr_group = {
 
 int ufs_nvm_register_sysfs(struct scsi_disk *sd)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_register_sysfs(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_register_sysfs(), started\n");
 	return sysfs_create_group(&disk_to_dev(sd->disk)->kobj, &nvm_dev_attr_group);
-	pr_err("LIGHTNVM_UFS: ufs_nvm_register_sysfs(), completed\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_register_sysfs(), completed\n");
 }
 
 void ufs_nvm_unregister_sysfs(struct scsi_disk *sd)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_unregister_sysfs(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister_sysfs(), started\n");
 	sysfs_remove_group(&disk_to_dev(sd->disk)->kobj, &nvm_dev_attr_group);
-	pr_err("LIGHTNVM_UFS: ufs_nvm_unregister_sysfs(), completed\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister_sysfs(), completed\n");
 }
 
 int ufs_nvm_supported(u16 vendor_id)
 {
-	pr_err("LIGHTNVM_UFS: ufs_nvm_supported(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_supported(), started\n");
 /*
 	if (dev_desc->wmanufacturerid == UFS_VENDOR_CQU && 
 		!strcmp(dev_desc->model, UFS_DEVICE_ID_CQU_QEMU))
 		return 1;
 */
 	if (vendor_id == UFS_VENDOR_CQU) {
-		pr_err("LIGHTNVM_UFS: ufs_nvm_supported(), current device is UFS_VENDOR_CQU\n");
+		pr_info("LIGHTNVM_UFS: ufs_nvm_supported(), current device is UFS_VENDOR_CQU\n");
 		return 1;
 	}
-	pr_err("LIGHTNVM_UFS: ufs_nvm_supported(), current device is %u\n", vendor_id);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_supported(), current device is %x\n", vendor_id);
 	return 0;	
 }

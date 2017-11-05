@@ -10,63 +10,63 @@ struct ufs_hba *null_hba;
 
 static int null_ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 {
-	pr_err("NULL_DEV: null_ufshcd_queuecommand(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_queuecommand(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_queuecommand(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_queuecommand(), completed\n");
 	return 0;
 }
 
 static int null_ufshcd_slave_alloc(struct scsi_device *sdev)
 {
-	pr_err("NULL_DEV: null_ufshcd_slave_alloc(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_slave_alloc(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_slave_alloc(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_slave_alloc(), completed\n");
 	return 0;
 }
 
 static int null_ufshcd_slave_configure(struct scsi_device *sdev)
 {
-	pr_err("NULL_DEV: null_ufshcd_slave_configure(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_slave_configure(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_slave_configure(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_slave_configure(), completed\n");
 	return 0;
 }
 
 static void null_ufshcd_slave_destroy(struct scsi_device *sdev)
 {
-	pr_err("NULL_DEV: null_ufshcd_slave_destroy(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_slave_destroy(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_slave_destroy(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_slave_destroy(), completed\n");
 }
 
 static int null_ufshcd_change_queue_depth(struct scsi_device *sdev, int depth)
 {
-	pr_err("NULL_DEV: null_ufshcd_change_queue_depth(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_change_queue_depth(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_change_queue_depth(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_change_queue_depth(), completed\n");
 	return 0;
 }
 
 static int null_ufshcd_abort(struct scsi_cmnd *cmd)
 {
-	pr_err("NULL_DEV: null_ufshcd_abort(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_abort(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_abort(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_abort(), completed\n");
 	return 0;
 }
 
 static int null_ufshcd_eh_device_reset_handler(struct scsi_cmnd *cmd)
 {
-	pr_err("NULL_DEV: null_ufshcd_eh_device_reset_handler(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_eh_device_reset_handler(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_eh_device_reset_handler(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_eh_device_reset_handler(), completed\n");
 	return 0;
 }
 
 static int null_ufshcd_eh_host_reset_handler(struct scsi_cmnd *cmd)
 {
-	pr_err("NULL_DEV: null_ufshcd_eh_host_reset_handler(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_eh_host_reset_handler(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_eh_host_reset_handler(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_eh_host_reset_handler(), completed\n");
 	return 0;
 }
 
 static enum blk_eh_timer_return null_ufshcd_eh_timed_out(struct scsi_cmnd *scmd)
 {
-	pr_err("NULL_DEV: null_ufshcd_eh_timed_out(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_eh_timed_out(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_eh_timed_out(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_eh_timed_out(), completed\n");
 	return BLK_EH_NOT_HANDLED;
 }
 
@@ -95,13 +95,13 @@ static int null_ufshcd_memory_alloc(struct ufs_hba *hba)
 {
 	size_t utmrdl_size, utrdl_size, ucdl_size;
 
-	pr_err("NULL_DEV: null_ufshcd_memory_alloc(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_memory_alloc(), started\n");
 	
 	/* Allocate memory for UTP command descriptors */
 	ucdl_size = (sizeof(struct utp_transfer_cmd_desc) * hba->nutrs);
 	hba->ucdl_base_addr = dmam_alloc_coherent(hba->dev, ucdl_size, &hba->ucdl_dma_addr, GFP_KERNEL);
 	if (!hba->ucdl_base_addr || WARN_ON(hba->ucdl_dma_addr & (PAGE_SIZE - 1))) {
-		pr_err("NULL_DEV: null_ufshcd_memory_alloc(), command descriptor memory allocation failed\n");
+		pr_info("NULL_DEV: null_ufshcd_memory_alloc(), command descriptor memory allocation failed\n");
 		goto out;
 	}
 
@@ -109,7 +109,7 @@ static int null_ufshcd_memory_alloc(struct ufs_hba *hba)
 	utrdl_size = (sizeof(struct utp_transfer_req_desc) * hba->nutrs);
 	hba->utrdl_base_addr = dmam_alloc_coherent(hba->dev, utrdl_size, &hba->utrdl_dma_addr, GFP_KERNEL);
 	if (!hba->utrdl_base_addr || WARN_ON(hba->utrdl_dma_addr & (PAGE_SIZE - 1))) {
-		pr_err("NULL_DEV: null_ufshcd_memory_alloc(), transfer descriptor memory allocation failed\n");
+		pr_info("NULL_DEV: null_ufshcd_memory_alloc(), transfer descriptor memory allocation failed\n");
 		goto out;
 	}
 
@@ -117,21 +117,21 @@ static int null_ufshcd_memory_alloc(struct ufs_hba *hba)
 	utmrdl_size = sizeof(struct utp_task_req_desc) * hba->nutmrs;
 	hba->utmrdl_base_addr = dmam_alloc_coherent(hba->dev, utmrdl_size, &hba->utmrdl_dma_addr, GFP_KERNEL);
 	if (!hba->utmrdl_base_addr || WARN_ON(hba->utmrdl_dma_addr & (PAGE_SIZE - 1))) {
-		pr_err("NULL_DEV: null_ufshcd_memory_alloc(), task management descriptor memory allocation failed\n");
+		pr_info("NULL_DEV: null_ufshcd_memory_alloc(), task management descriptor memory allocation failed\n");
 		goto out;
 	}
 
 	/* Allocate memory for local reference block */
 	hba->lrb = devm_kzalloc(hba->dev, hba->nutrs * sizeof(struct ufshcd_lrb), GFP_KERNEL);
 	if (!hba->lrb) {
-		pr_err("NULL_DEV: null_ufshcd_memory_alloc(), LRB memory allocation failed\n");
+		pr_info("NULL_DEV: null_ufshcd_memory_alloc(), LRB memory allocation failed\n");
 		goto out;
 	}
-	pr_err("NULL_DEV: null_ufshcd_memory_alloc(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_memory_alloc(), completed\n");
 	return 0;
 	
 out:
-	pr_err("NULL_DEV: null_ufshcd_memory_alloc(), failed\n");
+	pr_info("NULL_DEV: null_ufshcd_memory_alloc(), failed\n");
 	return -ENOMEM;
 }
 
@@ -146,7 +146,7 @@ static void null_ufshcd_host_memory_configure(struct ufs_hba *hba)
 	int cmd_desc_size;
 	int i;
 
-	pr_err("NULL_DEV: null_ufshcd_host_memory_configure(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_host_memory_configure(), started\n");
 	utrdlp = hba->utrdl_base_addr;
 	cmd_descp = hba->ucdl_base_addr;
 	response_offset = offsetof(struct utp_transfer_cmd_desc, response_upiu);
@@ -180,19 +180,19 @@ static void null_ufshcd_host_memory_configure(struct ufs_hba *hba)
 		hba->lrb[i].ucd_prdt_ptr = (struct ufshcd_sg_entry *)cmd_descp[i].prd_table;
 		hba->lrb[i].ucd_prdt_dma_addr = cmd_desc_element_addr + prdt_offset;
 	}
-	pr_err("NULL_DEV: null_ufshcd_host_memory_configure(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_host_memory_configure(), completed\n");
 }
 
 static void null_ufshcd_err_handler(struct work_struct *work)
 {
-	pr_err("NULL_DEV: null_ufshcd_err_handler(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_err_handler(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_err_handler(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_err_handler(), completed\n");
 }
 
 static void null_ufshcd_exception_event_handler(struct work_struct *work)
 {
-	pr_err("NULL_DEV: null_ufshcd_exception_event_handler(), started\n");
-	pr_err("NULL_DEV: null_ufshcd_exception_event_handler(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_exception_event_handler(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_exception_event_handler(), completed\n");
 }
 
 static void null_ufshcd_gate_work(struct work_struct *work){}
@@ -206,7 +206,7 @@ static void null_ufshcd_check_errors(struct ufs_hba *hba) {}
 
 static void null_ufshcd_init_clk_gating(struct ufs_hba *hba)
 {
-	pr_err("NULL_DEV: null_ufshcd_init_clk_gating(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_init_clk_gating(), started\n");
 	if (!(hba->caps & UFSHCD_CAP_CLK_GATING))
 		return;
 	hba->clk_gating.delay_ms = 150;
@@ -222,7 +222,7 @@ static void null_ufshcd_init_clk_gating(struct ufs_hba *hba)
 	hba->clk_gating.delay_attr.attr.mode = 0644;
 	
 	if (device_create_file(hba->dev, &hba->clk_gating.delay_attr))
-		pr_err("NULL_DEV: null_ufshcd_init_clk_gating(), failed to create sysfs for clkgate_delay\n");
+		pr_info("NULL_DEV: null_ufshcd_init_clk_gating(), failed to create sysfs for clkgate_delay\n");
 	
 	hba->clk_gating.enable_attr.show = null_ufshcd_clkgate_enable_show;
 	hba->clk_gating.enable_attr.store = null_ufshcd_clkgate_enable_store;
@@ -231,8 +231,8 @@ static void null_ufshcd_init_clk_gating(struct ufs_hba *hba)
 	hba->clk_gating.enable_attr.attr.mode = 0644;
 	
 	if (device_create_file(hba->dev, &hba->clk_gating.enable_attr))
-		pr_err("NULL_DEV: null_ufshcd_init_clk_gating(), failed to create sysfs for clkgate_enable\n");
-	pr_err("NULL_DEV: null_ufshcd_init_clk_gating(), completed\n");
+		pr_info("NULL_DEV: null_ufshcd_init_clk_gating(), failed to create sysfs for clkgate_enable\n");
+	pr_info("NULL_DEV: null_ufshcd_init_clk_gating(), completed\n");
 }
 
 static irqreturn_t null_ufshcd_intr(int irq, void *__hba)
@@ -241,7 +241,7 @@ static irqreturn_t null_ufshcd_intr(int irq, void *__hba)
 	irqreturn_t retval = IRQ_NONE;
 	struct ufs_hba *hba = __hba;
 
-	pr_err("NULL_DEV: null_ufshcd_intr(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_intr(), started\n");
 	spin_lock(hba->host->host_lock);
 	intr_status = ufshcd_readl(hba, REG_INTERRUPT_STATUS);
 	enabled_intr_status = intr_status & ufshcd_readl(hba, REG_INTERRUPT_ENABLE);
@@ -273,7 +273,7 @@ static irqreturn_t null_ufshcd_intr(int irq, void *__hba)
 		retval = IRQ_HANDLED;
 	}
 	spin_unlock(hba->host->host_lock);
-	pr_err("NULL_DEV: null_ufshcd_intr(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_intr(), completed\n");
 	return retval;
 }
 
@@ -286,20 +286,25 @@ static int null_ufshcd_register(void)
 	void __iomem *mmio_base;
 	unsigned int irq = 15;
 	int err = 0;
+	u64 *dma_mask;
 
-	pr_err("NULL_DEV: null_ufshcd_register(), started\n");
+	pr_info("NULL_DEV: null_ufshcd_register(), started\n");
 	/* alloc null device */
 	dev = kzalloc(sizeof(struct device), GFP_KERNEL);
 	if (!dev) {
-		pr_err("NULL_DEV: null_ufshcd_register(), kzalloc device failed\n");
+		pr_info("NULL_DEV: null_ufshcd_register(), kzalloc device failed\n");
 		err = -ENODEV;
 		goto out_error;
 	}
+	dma_mask = kzalloc(sizeof(u64), GFP_KERNEL);
+	*dma_mask = 0x00000000ffffffff;
+	hba->dev->dma_mask = dma_mask;
+	hba->dev->coherent_dma_mask = *dma_mask;
 
 	/* alloc Scsi_Host */
 	host = scsi_host_alloc(&null_ufshcd_driver_template, sizeof(struct ufs_hba));
 	if (!host) {
-		pr_err("NULL_DEV: null_ufshcd_register(), scsi_host_alloc failed\n");
+		pr_info("NULL_DEV: null_ufshcd_register(), scsi_host_alloc failed\n");
 		err = -ENOMEM;
 		goto out_error;
 	}
@@ -312,7 +317,7 @@ static int null_ufshcd_register(void)
 	/* mmio_base init  260 bytes */
 	mmio_base = kzalloc(260, GFP_KERNEL);
 	if (!mmio_base) {
-		pr_err("NULL_DEV: null_ufshcd_register(), kzalloc mmio_base failed\n");
+		pr_info("NULL_DEV: null_ufshcd_register(), kzalloc mmio_base failed\n");
 		err = -ENODEV;
 		goto out_error;
 	}
@@ -354,6 +359,59 @@ static int null_ufshcd_register(void)
 	ufshcd_writel(hba, __NOTSET__, UFSHCI_REG_SPACE_SIZE);
 	ufshcd_writel(hba, __NOTSET__, REG_UFS_CCAP);
 
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_CONTROLLER_CAPABILITIES]=%x\n", 
+		ufshcd_readl(hba, REG_CONTROLLER_CAPABILITIES));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UFS_VERSION]=%x\n", 
+		ufshcd_readl(hba, REG_UFS_VERSION));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_CONTROLLER_DEV_ID]=%x\n", 
+		ufshcd_readl(hba, REG_CONTROLLER_DEV_ID));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_CONTROLLER_PROD_ID]=%x\n", 
+		ufshcd_readl(hba, REG_CONTROLLER_PROD_ID));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_AUTO_HIBERNATE_IDLE_TIMER]=%x\n", 
+		ufshcd_readl(hba, REG_AUTO_HIBERNATE_IDLE_TIMER));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_INTERRUPT_STATUS]=%x\n", 
+		ufshcd_readl(hba, REG_INTERRUPT_STATUS));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_INTERRUPT_ENABLE]=%x\n", 
+		ufshcd_readl(hba, REG_INTERRUPT_ENABLE));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_CONTROLLER_STATUS]=%x\n", 
+		ufshcd_readl(hba, REG_CONTROLLER_STATUS));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_CONTROLLER_ENABLE]=%x\n", 
+		ufshcd_readl(hba, REG_CONTROLLER_ENABLE));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_ERROR_CODE_DATA_LINK_LAYER]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_ERROR_CODE_DATA_LINK_LAYER));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_ERROR_CODE_NETWORK_LAYER]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_ERROR_CODE_NETWORK_LAYER));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_ERROR_CODE_TRANSPORT_LAYER]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_ERROR_CODE_TRANSPORT_LAYER));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_ERROR_CODE_DME]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_ERROR_CODE_DME));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UTP_TRANSFER_REQ_INT_AGG_CONTROL]=%x\n", 
+		ufshcd_readl(hba, REG_UTP_TRANSFER_REQ_INT_AGG_CONTROL));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UTP_TRANSFER_REQ_LIST_BASE_L]=%x\n", 
+		ufshcd_readl(hba, REG_UTP_TRANSFER_REQ_LIST_BASE_L));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UTP_TRANSFER_REQ_LIST_BASE_H]=%x\n", 
+		ufshcd_readl(hba, REG_UTP_TRANSFER_REQ_LIST_BASE_H));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UTP_TRANSFER_REQ_DOOR_BELL]=%x\n", 
+		ufshcd_readl(hba, REG_UTP_TRANSFER_REQ_DOOR_BELL));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UTP_TASK_REQ_LIST_CLEAR]=%x\n", 
+		ufshcd_readl(hba, REG_UTP_TASK_REQ_LIST_CLEAR));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UTP_TASK_REQ_LIST_RUN_STOP]=%x\n", 
+		ufshcd_readl(hba, REG_UTP_TASK_REQ_LIST_RUN_STOP));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_COMMAND]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_COMMAND));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_COMMAND_ARG_1]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_COMMAND_ARG_1));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_COMMAND_ARG_2]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_COMMAND_ARG_2));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UIC_COMMAND_ARG_3]=%x\n", 
+		ufshcd_readl(hba, REG_UIC_COMMAND_ARG_3));
+	pr_info("NULL_DEV: null_ufshcd_register(), [UFSHCI_REG_SPACE_SIZE]=%x\n", 
+		ufshcd_readl(hba, UFSHCI_REG_SPACE_SIZE));
+	pr_info("NULL_DEV: null_ufshcd_register(), [REG_UFS_CCAP]=%x\n", 
+		ufshcd_readl(hba, REG_UFS_CCAP));
+
 	/* Set descriptor lengths to specification defaults */
 	hba->desc_size.dev_desc = QUERY_DESC_DEVICE_DEF_SIZE;
 	hba->desc_size.pwr_desc = QUERY_DESC_POWER_DEF_SIZE;
@@ -376,7 +434,7 @@ static int null_ufshcd_register(void)
 	    (hba->ufs_version != UFSHCI_VERSION_11) &&
 	    (hba->ufs_version != UFSHCI_VERSION_20) &&
 	    (hba->ufs_version != UFSHCI_VERSION_21))
-	    pr_err("NULL_DEV: null_ufshcd_register(), invalid UFS version\n");
+	    pr_info("NULL_DEV: null_ufshcd_register(), invalid UFS version\n");
 
 	/* Get Interrupt bit mask per version */
 	switch (hba->ufs_version) {
@@ -395,17 +453,15 @@ static int null_ufshcd_register(void)
 
 	/* Set DMA mask */
 	err = dma_set_mask_and_coherent(hba->dev, DMA_BIT_MASK(32));
-	/*
-    if (err) {
-		pr_err("NULL_DEV: null_ufshcd_register(), set dma mask failed\n");
+	if (err) {
+		pr_info("NULL_DEV: null_ufshcd_register(), set dma mask failed\n");
 		goto out_error;
 	}
-	*/
-
+	
 	/* Allocate memory for host memory space */
 	err = null_ufshcd_memory_alloc(hba);
 	if (err) {
-		pr_err("NULL_DEV: null_ufshcd_register(), memory allocation failed\n");
+		pr_info("NULL_DEV: null_ufshcd_register(), memory allocation failed\n");
 		goto out_error;
 	}
 
@@ -446,24 +502,24 @@ static int null_ufshcd_register(void)
 	/* IRQ registration */
 	err = devm_request_irq(dev, irq, null_ufshcd_intr, IRQF_SHARED, UFSHCD, hba);
 	if (err) {
-		pr_err("NULL_DEV: null_ufshcd_register(), request irq failed\n");
+		pr_info("NULL_DEV: null_ufshcd_register(), request irq failed\n");
 		goto out_error;
 	} else {
 		hba->is_irq_enabled = true;
 	}
 	err = scsi_add_host(host, hba->dev);
 	if (err) {
-		pr_err("NULL_DEV: null_ufshcd_register(), scsi_add_host failed\n");
+		pr_info("NULL_DEV: null_ufshcd_register(), scsi_add_host failed\n");
 		goto out_error;
 	}
 
 	/* Host controller enable */
 
 	null_hba = hba;
-	pr_err("NULL_DEV: null_ufshcd_register(), completed\n");
+	pr_info("NULL_DEV: null_ufshcd_register(), completed\n");
 	
 out_error:
-	pr_err("NULL_DEV: null_ufshcd_register(), failed\n");
+	pr_info("NULL_DEV: null_ufshcd_register(), failed\n");
 	return err;
 }
 
@@ -472,7 +528,7 @@ static void null_ufshcd_unregister(void) { /* kfree null_hba */ }
 #else
 static int null_ufshcd_register(void) 
 {
-	pr_err("NULL_DEV: null_ufshcd_register(), CONFIG_SCSI needs to be enabled for UFSHCD\n");
+	pr_info("NULL_DEV: null_ufshcd_register(), CONFIG_SCSI needs to be enabled for UFSHCD\n");
 	return -EINVAL;
 }
 
@@ -481,13 +537,13 @@ static void null_ufshcd_unregister(void) {}
 
 static int __init nulldev_init(void) 
 {
-	pr_err("NULL_DEV: nulldev_init()\n");
+	pr_info("NULL_DEV: nulldev_init()\n");
 	return null_ufshcd_register();
 }
 
 static void __exit nulldev_exit(void)
 {
-	pr_err("NULL_DEV: nulldev_exit()\n");
+	pr_info("NULL_DEV: nulldev_exit()\n");
 	null_ufshcd_unregister();
 }
 
