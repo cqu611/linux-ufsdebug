@@ -179,7 +179,7 @@ static int init_grps(struct nvm_id *nvmid, struct ufs_nvm_id *ufs_nvmid)
 		memcpy(dst->lptbl.id, src->lptbl.id, 8);
 		dst->lptbl.mlc.num_pairs = le16_to_cpu(src->lptbl.mlc.num_pairs);
 		if (dst->lptbl.mlc.num_pairs > UFS_NVM_LP_MLC_PAIRS) {
-			pr_err("nvm: number of MLC pairs not supported\n");
+			pr_err("LIGHTNVM_UFS: number of MLC pairs not supported\n");
 			return -EINVAL;
 		}
 
@@ -691,9 +691,10 @@ int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
 	_ufs_nvm_check_size();
 	/* without node info, so set the node as 0 */
 	dev = kzalloc(sizeof(struct nvm_dev), GFP_KERNEL);
-	if (!dev)
+	if (!dev) {
 		pr_err("LIGHTNVM_UFS: ufs_nvm_register(), nvm_dev is empty, failed\n");
 		return -ENOMEM;
+	}
 
 	dev->q = q;
 	memcpy(dev->name, disk_name, DISK_NAME_LEN);
@@ -723,9 +724,10 @@ static ssize_t nvm_dev_attr_show(struct device *dev,
 	
 	pr_err("LIGHTNVM_UFS: nvm_dev_attr_show(), started\n");
 
-	if (!ndev)
+	if (!ndev) {
 		pr_err("LIGHTNVM_UFS: nvm_dev_attr_show(), nvm_dev is empty, failed\n");
 		return 0;
+	}
 
 	id = &ndev->identity;
 	grp = &id->grp;
@@ -884,9 +886,10 @@ int ufs_nvm_supported(u16 vendor_id)
 		!strcmp(dev_desc->model, UFS_DEVICE_ID_CQU_QEMU))
 		return 1;
 */
-	if (vendor_id == UFS_VENDOR_CQU)
+	if (vendor_id == UFS_VENDOR_CQU) {
 		pr_err("LIGHTNVM_UFS: ufs_nvm_supported(), current device is UFS_VENDOR_CQU\n");
 		return 1;
-	pr_err("LIGHTNVM_UFS: ufs_nvm_supported(), current device is %d\n", vendor_id);
+	}
+	pr_err("LIGHTNVM_UFS: ufs_nvm_supported(), current device is %u\n", vendor_id);
 	return 0;	
 }
