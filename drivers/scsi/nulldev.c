@@ -286,7 +286,6 @@ static int null_ufshcd_register(void)
 	void __iomem *mmio_base;
 	unsigned int irq = 15;
 	int err = 0;
-	u64 *dma_mask;
 
 	pr_info("NULL_DEV: null_ufshcd_register(), started\n");
 	/* alloc null device */
@@ -296,10 +295,6 @@ static int null_ufshcd_register(void)
 		err = -ENODEV;
 		goto out_error;
 	}
-	dma_mask = kzalloc(sizeof(u64), GFP_KERNEL);
-	*dma_mask = 0x00000000ffffffff;
-	hba->dev->dma_mask = dma_mask;
-	hba->dev->coherent_dma_mask = *dma_mask;
 
 	/* alloc Scsi_Host */
 	host = scsi_host_alloc(&null_ufshcd_driver_template, sizeof(struct ufs_hba));
@@ -329,7 +324,7 @@ static int null_ufshcd_register(void)
 
 	ufshcd_writel(hba, 0x0707101f, REG_CONTROLLER_CAPABILITIES);
 	ufshcd_writel(hba, 0x00000210, REG_UFS_VERSION);						/* UFS Version */
-	ufshcd_writel(hba, __NOTSET__, REG_CONTROLLER_DEV_ID);					/* Product ID */
+	ufshcd_writel(hba, 0xeeee, REG_CONTROLLER_DEV_ID);					/* Product ID */
 	ufshcd_writel(hba, 0xeeee, REG_CONTROLLER_PROD_ID);						/* Manufacturer ID */
 	ufshcd_writel(hba, __NOTSET__, REG_AUTO_HIBERNATE_IDLE_TIMER);
 	ufshcd_writel(hba, __NOTSET__, REG_INTERRUPT_STATUS);
@@ -452,10 +447,13 @@ static int null_ufshcd_register(void)
 	}
 
 	/* Set DMA mask */
+	//hba->dev->dma_mask = kzalloc(sizeof(u64), GFP_KERNEL);
+	//*(hba->dev->dma_mask) = 0xffffffff;
+	//hba->dev->coherent_dma_mask = 0xffffffff;
 	err = dma_set_mask_and_coherent(hba->dev, DMA_BIT_MASK(32));
 	if (err) {
 		pr_info("NULL_DEV: null_ufshcd_register(), set dma mask failed\n");
-		goto out_error;
+	//	goto out_error;
 	}
 	
 	/* Allocate memory for host memory space */
