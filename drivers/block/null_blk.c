@@ -9,6 +9,8 @@
 #include <linux/blk-mq.h>
 #include <linux/hrtimer.h>
 #include <linux/lightnvm.h>
+#include <scsi/scsi_device.h>
+
 
 struct nullb_cmd {
 	struct list_head list;
@@ -35,6 +37,7 @@ struct nullb {
 	struct request_queue *q;
 	struct gendisk *disk;
 	struct nvm_dev *ndev;
+	struct scsi_device *sd;
 	struct blk_mq_tag_set tag_set;
 	struct hrtimer timer;
 	unsigned int queue_depth;
@@ -582,6 +585,71 @@ static int null_nvm_register(struct nullb *nullb)
 static void null_nvm_unregister(struct nullb *nullb) {}
 #endif /* CONFIG_NVM */
 
+#ifdef CONFIG_NVM
+void scsi_evt_thread(struct work_struct *work) {}
+void scsi_requeue_run_queue(struct work_struct *work) {}
+
+
+static int null_scsi_disk_register(struct nullb *nullb) {
+	struct scsi_device *sd;
+
+	pr_info("NULL_SD: null_scsi_disk_register(), started\n");
+	sd = kzalloc(sizeof(*sd), GFP_ATOMIC);
+	if (!sd) {
+		pr_info("NULL_SD: null_scsi_disk_register(), alloc sd failed\n");
+		return;
+	}
+
+	sd->vendor = "cqu";
+	sd->model = "cqu";
+	sd->rev = "cqu";
+	sd->queue_ramp_up_period = SCSI_DEFAULT_RAMP_UP_PERIOD;
+	sd->id = 3;
+	sd->lun = 8;
+	sd->channel = 4;
+	sd->sdev_state = SDEV_CREATED;
+	INIT_LIST_HEAD(&sd->siblings);
+	INIT_LIST_HEAD(&sd->same_target_siblings);
+	INIT_LIST_HEAD(&sd->cmd_list);
+	INIT_LIST_HEAD(&sd->starved_entry);
+	INIT_LIST_HEAD(&sd->event_list);
+	spin_lock_init(&sd->list_lock);
+	mutex_init(&sd->inquiry_mutex);
+	INIT_WORK(&sd->event_work, scsi_evt_thread);
+	INIT_WORK(&sd->requeue_work, scsi_requeue_run_queue);
+
+	sd->sdev_gendev.parent = nullb;
+	sd->max_device_blocked = SCSI_DEFAULT_DEVICE_BLOCKED;
+	sd->type = -1;
+	sd->borken = 1;
+
+	sd->request_queue = scsi_alloc_queue(sd);
+	if (!sd->request_queue) {
+		pr_info("NULL_SD: null_scsi_disk_register(), alloc sd request_queue failed\n");
+		return;
+	}
+	WARN_ON_ONCE(!blk_get_queue(sd->request_queue));
+	sd->request_queue->queuedata = sd;
+
+	scsi_sysfs_device_initialize(sd);
+	
+	if (ufs_nvm_supported(0xeeee)) {
+		pr_info("NULL_SD: null_scsi_disk_register(), ufs nvm supported\n");
+		ufs_nvm_register(nullb->sd, nullb->disk_name);
+		ufs_nvm_register_sysfs(nullb->sd);
+	}
+	pr_info("NULL_SD: null_scsi_disk_register(), completed\n");
+}
+
+static void null_scsi_disk_unregister(struct nullb *nullb){
+
+}
+#else
+
+static inline int null_scsi_disk_register(struct nullb *nullb) {}
+static inline void null_scsi_disk_unregister(struct nullb *nullb){}
+#endif
+
 static void null_del_dev(struct nullb *nullb)
 {
 	list_del_init(&nullb->list);
@@ -770,6 +838,8 @@ static int null_add_dev(void)
 	blk_queue_physical_block_size(nullb->q, bs);
 
 	sprintf(nullb->disk_name, "nullb%d", nullb->index);
+
+	null_scsi_disk_register(nullb);
 
 	if (use_lightnvm)
 		rv = null_nvm_register(nullb);
