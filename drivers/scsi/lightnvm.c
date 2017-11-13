@@ -561,10 +561,12 @@ static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 	return 0;
 }
 
-static void *ufs_nvm_create_dma_pool(struct nvm_dev *nvmdev, char *name)
+static void *ufs_nvm_create_dma_pool(struct nvm_dev *ndev, char *name)
 {
+	struct scsi_disk sdev = container_of(ndev, struct scsi_disk, nvmdev);
+
 	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), started\n");
-//	return dma_pool_create(name, container_of(nvmdev, struct scsi_disk, nvmdev)->dev, PAGE_SIZE, PAGE_SIZE, 0);
+	return dma_pool_create(name, &(sdev->dev), PAGE_SIZE, PAGE_SIZE, 0);
 }
 
 static void ufs_nvm_destroy_dma_pool(void *pool) 
