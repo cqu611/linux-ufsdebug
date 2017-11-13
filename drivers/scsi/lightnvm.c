@@ -566,7 +566,7 @@ static void *ufs_nvm_create_dma_pool(struct nvm_dev *nvmdev, char *name)
 	struct scsi_device *scsi_dev = nvmdev->q->queuedata;
 
 	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), started\n");
-	return dma_pool_create(name, &(scsi_dev->host->shost_dev), PAGE_SIZE, PAGE_SIZE, 0);
+	return dma_pool_create(name, to_scsi_disk(*scsi_dev), PAGE_SIZE, PAGE_SIZE, 0);
 }
 
 static void ufs_nvm_destroy_dma_pool(void *pool) 
