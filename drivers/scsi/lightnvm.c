@@ -907,14 +907,13 @@ struct scsi_disk *null_sd;
 static int __init null_lnvm_init(void) 
 {
 	struct scsi_device *sdev;
-	struct device *dev;
 	struct request_queue *rq;
 	struct gendisk *gd;
 
 	pr_info("LIGHTNVM_UFS: null_lnvm_init()\n");
 	if (ufs_nvm_supported(0xeeee)) {
 		
-		null_sd = kzalloc(sizeof(scsi_disk), GFP_KERNEL);
+		null_sd = kzalloc(sizeof(struct scsi_disk), GFP_KERNEL);
 		if (!null_sd) {
 			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc scsi_disk failed\n");
 			return -EINVAL;
@@ -932,18 +931,18 @@ static int __init null_lnvm_init(void)
 			return -EINVAL;
 		}
 
-		sdev = kzalloc(sizeof(scsi_device), GFP_ATOMIC);
+		sdev = kzalloc(sizeof(struct scsi_device), GFP_ATOMIC);
 		if (!sdev) {
 			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc scsi_device failed\n");
 			return -EINVAL;
 		}
 
 		sdev->request_queue = rq;
+		rq->queuedata = sdev;
 		gd->queue = rq;
 
 		null_sd->device = sdev;
 		null_sd->disk = gd;
-		null_sd->dev = dev;
 		ufs_nvm_register(null_sd, "mmp");
 		ufs_nvm_register_sysfs(null_sd);
 	}
@@ -953,7 +952,7 @@ static int __init null_lnvm_init(void)
 static void __exit null_lnvm_exit(void)
 {
 	pr_info("LIGHTNVM_UFS: null_lnvm_exit()\n");
-	ufs_nvm_unregister_sysfs(struct scsi_disk * sd);
+	ufs_nvm_unregister_sysfs(null_sd);
 	ufs_nvm_unregister(null_sd);
 }
 
