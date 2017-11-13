@@ -563,10 +563,11 @@ static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 
 static void *ufs_nvm_create_dma_pool(struct nvm_dev *ndev, char *name)
 {
-	struct scsi_disk sdev = container_of(ndev, struct scsi_disk, nvmdev);
+	struct scsi_disk *sdev = container_of(ndev, struct scsi_disk, nvmdev);
 
 	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), started\n");
 	return dma_pool_create(name, &(sdev->dev), PAGE_SIZE, PAGE_SIZE, 0);
+	return 0;
 }
 
 static void ufs_nvm_destroy_dma_pool(void *pool) 
@@ -911,7 +912,7 @@ static int __init null_lnvm_init(void)
 	struct gendisk *gd;
 
 	pr_info("LIGHTNVM_UFS: null_lnvm_init()\n");
-	if (ufs_nvm_supported(0xeeee)) {
+	if (ufs_nvm_supported(0)) {
 		
 		null_sd = kzalloc(sizeof(struct scsi_disk), GFP_KERNEL);
 		if (!null_sd) {
