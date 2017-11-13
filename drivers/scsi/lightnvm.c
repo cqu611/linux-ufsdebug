@@ -563,7 +563,7 @@ static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 
 static void *ufs_nvm_create_dma_pool(struct nvm_dev *ndev, char *name)
 {
-	struct scsi_disk *sdev = container_of(ndev, struct scsi_disk, nvmdev);
+	struct scsi_disk *sdev = ndev->private_data;
 
 	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), started\n");
 	return dma_pool_create(name, &(sdev->dev), PAGE_SIZE, PAGE_SIZE, 0);
