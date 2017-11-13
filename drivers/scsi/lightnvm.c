@@ -16,6 +16,8 @@
  * USA.
  *
  */
+#include <linux/module.h>
+#include <linux/moduleparam.h>
 
 #include <scsi/scsi_cmnd.h>
 #include <scsi/scsi_request.h>
@@ -705,6 +707,7 @@ int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
 	pr_info("LIGHTNVM_UFS: ufs_nvm_register(), completed\n");
 	return nvm_register(dev);
 }
+EXPORT_SYMBOL(ufs_nvm_register);
 
 void ufs_nvm_unregister(struct scsi_disk *sd) 
 {
@@ -712,6 +715,7 @@ void ufs_nvm_unregister(struct scsi_disk *sd)
 	nvm_unregister(sd->nvmdev);
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister(), completed\n");
 }
+EXPORT_SYMBOL(ufs_nvm_unregister);
 
 static ssize_t nvm_dev_attr_show(struct device *dev,
 				struct device_attribute *dattr, char *page)
@@ -870,6 +874,8 @@ int ufs_nvm_register_sysfs(struct scsi_disk *sd)
 	return sysfs_create_group(&disk_to_dev(sd->disk)->kobj, &nvm_dev_attr_group);
 	pr_info("LIGHTNVM_UFS: ufs_nvm_register_sysfs(), completed\n");
 }
+EXPORT_SYMBOL(ufs_nvm_register_sysfs);
+
 
 void ufs_nvm_unregister_sysfs(struct scsi_disk *sd)
 {
@@ -877,6 +883,7 @@ void ufs_nvm_unregister_sysfs(struct scsi_disk *sd)
 	sysfs_remove_group(&disk_to_dev(sd->disk)->kobj, &nvm_dev_attr_group);
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister_sysfs(), completed\n");
 }
+EXPORT_SYMBOL(ufs_nvm_unregister_sysfs);
 
 int ufs_nvm_supported(u16 vendor_id)
 {
@@ -891,5 +898,68 @@ int ufs_nvm_supported(u16 vendor_id)
 		return 1;
 	}
 	pr_info("LIGHTNVM_UFS: ufs_nvm_supported(), current device is %x\n", vendor_id);
-	return 0;	
+	return 0;		
 }
+EXPORT_SYMBOL(ufs_nvm_supported);
+
+struct scsi_disk *null_sd;
+
+static int __init null_lnvm_init(void) 
+{
+	struct scsi_device *sdev;
+	struct device *dev;
+	struct request_queue *rq;
+	struct gendisk *gd;
+
+	pr_info("LIGHTNVM_UFS: null_lnvm_init()\n");
+	if (ufs_nvm_supported(0xeeee)) {
+		
+		null_sd = kzalloc(sizeof(scsi_disk), GFP_KERNEL);
+		if (!null_sd) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc scsi_disk failed\n");
+			return -EINVAL;
+		}
+		
+		gd = alloc_disk(16);
+		if (!gd) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc_disk failed\n");
+			return -EINVAL;
+		}
+
+		rq = blk_alloc_queue_node(GFP_KERNEL, NUMA_NO_NODE);
+		if (!rq) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc_queue failed\n");
+			return -EINVAL;
+		}
+
+		sdev = kzalloc(sizeof(scsi_device), GFP_ATOMIC);
+		if (!sdev) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc scsi_device failed\n");
+			return -EINVAL;
+		}
+
+		sdev->request_queue = rq;
+		gd->queue = rq;
+
+		null_sd->device = sdev;
+		null_sd->disk = gd;
+		null_sd->dev = dev;
+		ufs_nvm_register(null_sd, "mmp");
+		ufs_nvm_register_sysfs(null_sd);
+	}
+	return 0;
+}
+
+static void __exit null_lnvm_exit(void)
+{
+	pr_info("LIGHTNVM_UFS: null_lnvm_exit()\n");
+	ufs_nvm_unregister_sysfs(struct scsi_disk * sd);
+	ufs_nvm_unregister(null_sd);
+}
+
+module_init(null_lnvm_init);
+module_exit(null_lnvm_exit);
+
+MODULE_AUTHOR("Xiong Xiong <xxiong@cqu.edu.cn>");
+MODULE_LICENSE("GPL");
+
