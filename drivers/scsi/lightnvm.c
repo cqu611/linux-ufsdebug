@@ -709,7 +709,7 @@ int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
 void ufs_nvm_unregister(struct scsi_disk *sd) 
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister(), started\n");
-	nvm_register(sd->nvmdev);
+	nvm_unregister(sd->nvmdev);
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister(), completed\n");
 }
 
