@@ -597,7 +597,7 @@ static int null_scsi_disk_register(struct nullb *nullb) {
 	sd = kzalloc(sizeof(*sd), GFP_ATOMIC);
 	if (!sd) {
 		pr_info("NULL_SD: null_scsi_disk_register(), alloc sd failed\n");
-		return;
+		return 0;
 	}
 
 	sd->vendor = "cqu";
@@ -618,7 +618,7 @@ static int null_scsi_disk_register(struct nullb *nullb) {
 	INIT_WORK(&sd->event_work, scsi_evt_thread);
 	INIT_WORK(&sd->requeue_work, scsi_requeue_run_queue);
 
-	sd->sdev_gendev.parent = nullb;
+	//sd->sdev_gendev.parent = nullb;
 	sd->max_device_blocked = SCSI_DEFAULT_DEVICE_BLOCKED;
 	sd->type = -1;
 	sd->borken = 1;
@@ -626,7 +626,7 @@ static int null_scsi_disk_register(struct nullb *nullb) {
 	sd->request_queue = scsi_alloc_queue(sd);
 	if (!sd->request_queue) {
 		pr_info("NULL_SD: null_scsi_disk_register(), alloc sd request_queue failed\n");
-		return;
+		return 0;
 	}
 	WARN_ON_ONCE(!blk_get_queue(sd->request_queue));
 	sd->request_queue->queuedata = sd;
@@ -639,6 +639,7 @@ static int null_scsi_disk_register(struct nullb *nullb) {
 		ufs_nvm_register_sysfs(nullb->sd);
 	}
 	pr_info("NULL_SD: null_scsi_disk_register(), completed\n");
+	return 0;
 }
 
 static void null_scsi_disk_unregister(struct nullb *nullb){
