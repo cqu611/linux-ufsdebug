@@ -25,3 +25,7 @@ include/generated/autoconf.h
 include/generated/compile.h
 include/config/scsi/nulldev.h
 
+include/config/auto.conf.cmd
+include/config/kernel.release
+include/generated/utsrelease.h
+
