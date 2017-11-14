@@ -326,7 +326,7 @@ static inline void sd_zbc_complete(struct scsi_cmnd *cmd,
 
 #endif /* CONFIG_BLK_DEV_ZONED */
 
-#ifdef CONFIG_NVM
+#ifdef CONFIG_THIS_IS_NOT_DEFINED
 int ufs_nvm_supported(u16 vendor_id);
 int ufs_nvm_register(struct scsi_disk *sd, char *disk_name);
 void ufs_nvm_unregister(struct scsi_disk *sd);
@@ -337,13 +337,13 @@ int ufs_nvm_ioctl(struct scsi_disk *sd, unsigned int cmd, void __user *arg);
 static inline int ufs_nvm_supported(u16 vendor_id)
 { return 0; }
 static inline int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
-{ return 0; }
+{ sd->nvmdev = NULL; return 0; }
 static inline void ufs_nvm_unregister(struct scsi_disk *sd){}
 static inline int ufs_nvm_register_sysfs(struct scsi_disk *sd)
 { return 0; }
 static inline void ufs_nvm_unregister_sysfs(struct scsi_disk *sd){}
 static inline int ufs_nvm_ioctl(struct scsi_disk *sd, unsigned int cmd, void __user *arg)
 { return 0; }
-#endif /* CONFIG_NVM */
+#endif /* CONFIG_THIS_IS_NOT_DEFINED */
 
 #endif /* _SCSI_DISK_H */
