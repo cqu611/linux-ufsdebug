@@ -155,6 +155,7 @@ obj-$(CONFIG_SCSI_ENCLOSURE)	+= ses.o
 obj-$(CONFIG_SCSI_OSD_INITIATOR) += osd/
 obj-$(CONFIG_SCSI_HISI_SAS) += hisi_sas/
 obj-$(CONFIG_SCSI_NULLDEV)		+= nulldev.o
+obj-$(CONFIG_SCSI_NULLNVM)	+= lightnvm.o
 
 # This goes last, so that "real" scsi devices probe earlier
 obj-$(CONFIG_SCSI_DEBUG)	+= scsi_debug.o
@@ -177,7 +178,6 @@ hv_storvsc-y			:= storvsc_drv.o
 sd_mod-objs	:= sd.o
 sd_mod-$(CONFIG_BLK_DEV_INTEGRITY) += sd_dif.o
 sd_mod-$(CONFIG_BLK_DEV_ZONED) += sd_zbc.o
-sd_mod-$(CONFIG_NVM)	+= lightnvm.o
 
 sr_mod-objs	:= sr.o sr_ioctl.o sr_vendor.o
 ncr53c8xx-flags-$(CONFIG_SCSI_ZALON) \
