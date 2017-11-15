@@ -337,7 +337,7 @@ int ufs_nvm_ioctl(struct scsi_disk *sd, unsigned int cmd, void __user *arg);
 static inline int ufs_nvm_supported(u16 vendor_id)
 { return 0; }
 static inline int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
-{ return 0; }
+{ sd->nvmdev = NULL; return 0; }
 static inline void ufs_nvm_unregister(struct scsi_disk *sd){}
 static inline int ufs_nvm_register_sysfs(struct scsi_disk *sd)
 { return 0; }

@@ -450,19 +450,21 @@ static int null_ufshcd_register(void)
 	//hba->dev->dma_mask = kzalloc(sizeof(u64), GFP_KERNEL);
 	//*(hba->dev->dma_mask) = 0xffffffff;
 	//hba->dev->coherent_dma_mask = 0xffffffff;
+	/*
 	err = dma_set_mask_and_coherent(hba->dev, DMA_BIT_MASK(32));
 	if (err) {
 		pr_info("NULL_DEV: null_ufshcd_register(), set dma mask failed\n");
 	//	goto out_error;
 	}
-	
+	*/
 	/* Allocate memory for host memory space */
+	/*
 	err = null_ufshcd_memory_alloc(hba);
 	if (err) {
 		pr_info("NULL_DEV: null_ufshcd_register(), memory allocation failed\n");
 		goto out_error;
 	}
-
+	*/
 	/* Configure LRB */
 	null_ufshcd_host_memory_configure(hba);
 	host->can_queue = hba->nutrs;

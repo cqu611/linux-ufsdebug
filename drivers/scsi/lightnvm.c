@@ -16,6 +16,8 @@
  * USA.
  *
  */
+#include <linux/module.h>
+#include <linux/moduleparam.h>
 
 #include <scsi/scsi_cmnd.h>
 #include <scsi/scsi_request.h>
@@ -28,12 +30,19 @@
 #include <linux/sched/sysctl.h>
 #include <uapi/linux/lightnvm.h>
 
-#include "sd.h"
+#include "/root/linufs/drivers/scsi/sd.h"
 
 #define UFS_NVM_LP_MLC_PAIRS 886
 #define SCSI_MAX_CDBLEN 16
 #define UFS_DEVICE_CQU_QEMU	"qemu-test"	/* Not Used */
 #define UFS_VENDOR_CQU		   	0xeeee
+
+static LIST_HEAD(nullnvm_list);
+static struct mutex lock;
+static int nullnvm_major;
+static int nullnvm_indexes;
+static struct kmem_cache *ppa_cache;
+
 
 enum ufs_nvm_opcode {
 	UFS_NVM_ADMIN_IDENTITY		= 0xe1,
@@ -127,10 +136,187 @@ struct ufs_nvm_bb_tbl {
 
 };
 
-int ufs_submit_sync_cmd(struct request_queue *q, struct scsi_cmnd *cmd,
-				void *buffer, unsigned bufflen);
+static inline bool ufs_nvm_is_write(struct scsi_cmnd *cmd)
+{
+	pr_info("LIGHTNVM_UFS: ufs_nvm_is_write(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_is_write(), scsi_cmnd = %#x\n", cmd);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_is_write(), scsi_cmnd->cmnd = %#x\n", cmd->cmnd);
+	if (cmd->cmnd[0] == 0xc4)
+		return 1;
+	return 0;
+}
+
 static inline struct request *ufs_nvm_alloc_request(struct request_queue *q,
-			struct scsi_cmnd *cmd);
+			struct scsi_cmnd *cmd)
+{
+	unsigned op = ufs_nvm_is_write(cmd) ? REQ_OP_DRV_OUT : REQ_OP_DRV_IN;
+	struct request *req;
+
+	pr_info("LIGHTNVM_UFS: ufs_nvm_alloc_request(), started\n");
+	pr_info("LIGHTNVM_UFS: ufs_nvm_alloc_request(), request_queue = %#x\n", q);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_alloc_request(), op = %#x\n", op);
+	return (struct request*)0;
+	req = blk_mq_alloc_request(q, op, 0);
+	if (IS_ERR(req))
+		return req;
+	req->cmd_flags |= REQ_FAILFAST_DRIVER;
+	scsi_req(req)->cmd = cmd->cmnd;
+
+	return req;
+}
+
+int nullnvm_identity(struct scsi_cmnd *cmd, struct ufs_nvm_id *id, unsigned bufflen) 
+{
+	sector_t size = 250 * 1024 * 1024 * 1024ULL;
+	sector_t blksize;
+	struct ufs_nvm_id_group *grp;
+				
+	id->ver_id = 0x1;
+	id->vmnt = 0;
+	id->cgrps = 1;
+	id->cap = 0x2;
+	id->dom = 0x1;
+
+	id->ppaf.blk_offset = 0;
+	id->ppaf.blk_len = 16;
+	id->ppaf.pg_offset = 16;
+	id->ppaf.pg_len = 16;
+	id->ppaf.sect_offset = 32;
+	id->ppaf.sect_len = 8;
+	id->ppaf.pln_offset = 40;
+	id->ppaf.pln_len = 8;
+	id->ppaf.lun_offset = 48;
+	id->ppaf.lun_len = 8;
+	id->ppaf.ch_offset = 56;
+	id->ppaf.ch_len = 8;
+	
+	sector_div(size, 512); /* convert size to pages */
+	size >>= 8; /* concert size to pgs pr blk */
+	grp = &id->groups[0];
+	grp->mtype = 0;
+	grp->fmtype = 0;
+	grp->num_ch = 1;
+	grp->num_pg = 256;
+	blksize = size;
+	size >>= 16;
+	grp->num_lun = size + 1;
+	sector_div(blksize, grp->num_lun);
+	grp->num_blk = blksize;
+	grp->num_pln = 1;
+
+	grp->fpg_sz = 512;
+	grp->csecs = 512;
+	grp->trdt = 25000;
+	grp->trdm = 25000;
+	grp->tprt = 500000;
+	grp->tprm = 500000;
+	grp->tbet = 1500000;
+	grp->tbem = 1500000;
+	grp->mpos = 0x010101; /* single plane rwe */
+	grp->cpar = 64;
+
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ver_id = %#x\n", id->ver_id);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->vmnt = %#x\n", id->vmnt);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->cgrps = %#x\n", id->cgrps);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->cap = %#x\n", id->cap);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->dom = %#x\n", id->dom);
+
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.blk_offset = %#x\n", id->ppaf.blk_offset);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.blk_len = %#x\n", id->ppaf.blk_len);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.pg_offset = %#x\n", id->ppaf.pg_offset);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.pg_len = %#x\n", id->ppaf.pg_len);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.sect_offset = %#x\n", id->ppaf.sect_offset);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.sect_len = %#x\n", id->ppaf.sect_len);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.pln_offset = %#x\n", id->ppaf.pln_offset);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.pln_len = %#x\n", id->ppaf.pln_len);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.lun_offset = %#x\n", id->ppaf.lun_offset);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.lun_len = %#x\n", id->ppaf.lun_len);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.ch_offset = %#x\n", id->ppaf.ch_offset);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), id->ppaf.ch_len = %#x\n", id->ppaf.ch_len);
+
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->mtype = %#x\n", grp->mtype);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->fmtype = %#x\n", grp->fmtype);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->num_ch = %#x\n", grp->num_ch);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->num_pg = %#x\n", grp->num_pg);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->num_lun = %#x\n", grp->num_lun);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->num_blk = %#x\n", grp->num_blk);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->num_pln = %#x\n", grp->num_pln);
+	
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->fpg_sz = %#x\n", grp->fpg_sz);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->fpg_sz = %#x\n", grp->fpg_sz);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->csecs = %#x\n", grp->csecs);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->trdt = %#x\n", grp->trdt);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->trdm = %#x\n", grp->trdm);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->tprt = %#x\n", grp->tprt);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->tprm = %#x\n", grp->tprm);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->tbet = %#x\n", grp->tbet);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->tbem = %#x\n", grp->tbem);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->mpos = %#x\n", grp->mpos);
+	pr_info("LIGHTNVM_UFS: nullnvm_identity(), grp->cpar = %#x\n", grp->cpar);
+	return 0;
+}
+
+int nullnvm_get_l2p_tbl(struct scsi_cmnd *cmd, struct ufs_nvm_l2p_tbl *l2p, unsigned bufflen)
+{
+	return 0;
+}
+
+int nullnvm_get_bb_tbl(struct scsi_cmnd *cmd, struct ufs_nvm_bb_tbl *bb, unsigned bufflen)
+{
+	return 0;
+}
+
+int nullnvm_set_bb_tbl(struct scsi_cmnd *cmd)
+{
+	return 0;
+}
+
+int ufs_submit_sync_cmd(struct request_queue *q, struct scsi_cmnd *cmd,
+				void *buffer, unsigned bufflen)
+{
+	struct request *req;
+	int ret;
+
+	switch(cmd->cmnd[0]) 
+	{
+		case UFS_NVM_ADMIN_IDENTITY:
+			pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), cmd = UFS_NVM_ADMIN_IDENTITY\n");
+			return nullnvm_identity(cmd, (struct ufs_nvm_id*) buffer, bufflen);
+		case UFS_NVM_ADMIN_GET_L2P_TBL:
+			pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), cmd = UFS_NVM_ADMIN_GET_L2P_TBL\n");
+			return nullnvm_get_l2p_tbl(cmd, (struct ufs_nvm_l2p_tbl*) buffer, bufflen);
+		case UFS_NVM_ADMIN_SET_BB_TBL:
+			pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), cmd = UFS_NVM_ADMIN_SET_BB_TBL\n");
+			return nullnvm_set_bb_tbl(cmd);
+		case UFS_NVM_ADMIN_GET_BB_TBL:
+			pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), cmd = UFS_NVM_ADMIN_GET_BB_TBL\n");
+			return nullnvm_get_bb_tbl(cmd, (struct ufs_nvm_bb_tbl*) buffer, bufflen);
+		default:
+			pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), Command can not be identified\n");
+			return 0;
+	}
+
+	pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), started\n");
+	req = ufs_nvm_alloc_request(q, cmd);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	if (buffer && bufflen) {
+		ret = blk_rq_map_kern(q, req, buffer, bufflen, GFP_KERNEL);
+		if (ret)
+			goto out;
+	}
+
+	blk_execute_rq(req->q, NULL, req, 0);
+	if (scsi_req(req)->result == DID_OK)
+		return scsi_req(req)->result;
+	else
+		return -EINTR;
+
+out:
+	blk_mq_free_request(req);
+	return ret;
+}
 
 static inline void _ufs_nvm_check_size(void)
 {
@@ -213,6 +399,7 @@ static int ufs_nvm_identity(struct nvm_dev *nvmdev, struct nvm_id *nvmid)
 	for (i=2; i < SCSI_MAX_CDBLEN; i++) {
 		cdb[i] = 0x00;
 	}
+	cmd->cmnd = cdb;
 
 	ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, 
 					ufs_nvmid, sizeof(struct ufs_nvm_id));
@@ -261,6 +448,7 @@ static int ufs_nvm_get_l2p_tbl(struct nvm_dev *nvmdev, u64 slba, u32 nlb,
 	entries = kmalloc(len, GFP_KERNEL);
 	if (!entries)
 		return -ENOMEM;
+	cmd->cmnd = cdb;
 
 	while (nlb) {
 		u32 cmd_nlb = min(nlb_pr_rq, nlb);
@@ -312,6 +500,7 @@ out:
 static int ufs_nvm_get_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr ppa,
 				u8 *blks)
 {
+	return 0;
 	struct request_queue *q = nvmdev->q;
 	struct nvm_geo *geo = &nvmdev->geo;
 	struct scsi_device *sdev = q->queuedata;
@@ -377,6 +566,7 @@ out:
 static int ufs_nvm_set_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr *ppas,
 				int nr_ppas, int type)
 {
+	return 0;
 	struct request_queue *q = nvmdev->q;
 	struct scsi_device *sdev = q->queuedata;
 	struct scsi_cmnd *cmd;
@@ -406,34 +596,6 @@ static int ufs_nvm_set_bb_tbl(struct nvm_dev *nvmdev, struct ppa_addr *ppas,
 	ret = ufs_submit_sync_cmd(sdev->request_queue, cmd, NULL, 0);
 	if (ret)
 		dev_err(&(sdev->sdev_dev), "set bad block table failed (%d)\n", ret);
-	return ret;
-}
-
-int ufs_submit_sync_cmd(struct request_queue *q, struct scsi_cmnd *cmd,
-				void *buffer, unsigned bufflen)
-{
-	struct request *req;
-	int ret;
-	
-	pr_info("LIGHTNVM_UFS: ufs_submit_sync_cmd(), started\n");
-	req = ufs_nvm_alloc_request(q, cmd);
-	if (IS_ERR(req))
-		return PTR_ERR(req);
-
-	if (buffer && bufflen) {
-		ret = blk_rq_map_kern(q, req, buffer, bufflen, GFP_KERNEL);
-		if (ret)
-			goto out;
-	}
-
-	blk_execute_rq(req->q, NULL, req, 0);
-	if (scsi_req(req)->result == DID_OK)
-		return scsi_req(req)->result;
-	else
-		return -EINTR;
-
-out:
-	blk_mq_free_request(req);
 	return ret;
 }
 
@@ -500,30 +662,6 @@ static void ufs_nvm_end_io(struct request *rq, int error)
 	blk_mq_free_request(rq);
 }
 
-static inline bool ufs_nvm_is_write(struct scsi_cmnd *cmd)
-{
-	pr_info("LIGHTNVM_UFS: ufs_nvm_is_write(), started\n");
-	if (cmd->cmnd[0] == 0xc4)
-		return 1;
-	return 0;
-}
-
-static inline struct request *ufs_nvm_alloc_request(struct request_queue *q,
-			struct scsi_cmnd *cmd)
-{
-	unsigned op = ufs_nvm_is_write(cmd) ? REQ_OP_DRV_OUT : REQ_OP_DRV_IN;
-	struct request *req;
-
-	pr_info("LIGHTNVM_UFS: ufs_nvm_alloc_request(), started\n");
-	req = blk_mq_alloc_request(q, op, 0);
-	if (IS_ERR(req))
-		return req;
-	req->cmd_flags |= REQ_FAILFAST_DRIVER;
-	scsi_req(req)->cmd = cmd->cmnd;
-
-	return req;
-}
-
 static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 {
 	struct request_queue *q = nvmdev->q;
@@ -531,6 +669,7 @@ static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 	struct request *rq;
 	struct bio *bio = rqd->bio;
 	struct scsi_cmnd *cmd;
+	int i=0;
 
 	pr_info("LIGHTNVM_UFS: ufs_nvm_submit_io(), started\n");
 	cmd = kzalloc(sizeof(struct scsi_cmnd), GFP_KERNEL);
@@ -538,6 +677,9 @@ static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 		return -ENOMEM;
 
 	ufs_nvm_rq2cmd(rqd, sdev, cmd);
+	for (i=0; i < 16; i++)
+		pr_info("LIGHTNVM_UFS: ufs_nvm_submit_io(), cdb[%d] = %#x\n", i, cmd->cmnd[i]);
+	return 0;
 
 	rq = ufs_nvm_alloc_request(q, cmd);
 	if (IS_ERR(rq)) {
@@ -559,34 +701,56 @@ static int ufs_nvm_submit_io(struct nvm_dev *nvmdev, struct nvm_rq *rqd)
 	return 0;
 }
 
-static void *ufs_nvm_create_dma_pool(struct nvm_dev *nvmdev, char *name)
+static void *ufs_nvm_create_dma_pool(struct nvm_dev *ndev, char *name)
 {
-	struct scsi_device *scsi_dev = nvmdev->q->queuedata;
+	struct scsi_disk *sdev = ndev->private_data;
+	mempool_t *virtmem_pool;
 
 	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), started\n");
-	return dma_pool_create(name, &(scsi_dev->host->shost_dev), PAGE_SIZE, PAGE_SIZE, 0);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), nvm_dev->ops = %#x\n", ndev->ops);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), nvm_dev->dma_pool = %#x\n", ndev->dma_pool);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), nvm_dev->q = %#x\n", ndev->q);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), nvm_dev->private_data = %#x\n", ndev->private_data);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), scsi_disk->driver = %#x\n", sdev->driver);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), scsi_disk->device = %#x\n", sdev->device);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), scsi_disk->dev = %#x\n", sdev->dev);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), scsi_disk->disk = %#x\n", sdev->disk);
+	pr_info("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), scsi_disk->nvmdev = %#x\n", sdev->nvmdev);
+	//return dma_pool_create(name, &(sdev->dev), PAGE_SIZE, PAGE_SIZE, 0);
+	//return 1;
+	
+	virtmem_pool = mempool_create_slab_pool(64, ppa_cache);
+	if (!virtmem_pool) {
+		pr_err("LIGHTNVM_UFS: ufs_nvm_create_dma_pool(), failed\n");
+		return NULL;
+	}
+
+	return virtmem_pool;
 }
 
 static void ufs_nvm_destroy_dma_pool(void *pool) 
 {
-	struct dma_pool *dma_pool = pool;
+	//struct dma_pool *dma_pool = pool;
 
 	pr_info("LIGHTNVM_UFS: ufs_nvm_destroy_dma_pool(), started\n");
-	dma_pool_destroy(dma_pool);
+	//dma_pool_destroy(dma_pool);
+	mempool_destroy(pool);
 }
 
 static void *ufs_nvm_dev_dma_alloc(struct nvm_dev *nvmdev, void *pool,
 				gfp_t mem_flags, dma_addr_t *dma_handler)
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_dev_dma_alloc(), started\n");
-	return dma_pool_alloc(pool, mem_flags, dma_handler);
+	//return dma_pool_alloc(pool, mem_flags, dma_handler);
+	return mempool_alloc(pool, mem_flags);
 }
 
 static void ufs_nvm_dev_dma_free(void * pool, void *addr,
 				dma_addr_t dma_handler)
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_dev_dma_free(), started\n");
-	dma_pool_free(pool, addr, dma_handler);
+	// dma_pool_free(pool, addr, dma_handler);
+	mempool_free(addr, pool);
 }
 
 static struct nvm_dev_ops ufs_nvm_dev_ops = {
@@ -680,6 +844,8 @@ int ufs_nvm_ioctl(struct scsi_disk *sd, unsigned int cmd, void __user *arg)
 		return -ENOTTY;
 	}
 }
+EXPORT_SYMBOL(ufs_nvm_ioctl);
+
 
 int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
 {
@@ -707,6 +873,7 @@ int ufs_nvm_register(struct scsi_disk *sd, char *disk_name)
 }
 EXPORT_SYMBOL(ufs_nvm_register);
 
+
 void ufs_nvm_unregister(struct scsi_disk *sd) 
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister(), started\n");
@@ -714,6 +881,7 @@ void ufs_nvm_unregister(struct scsi_disk *sd)
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister(), completed\n");
 }
 EXPORT_SYMBOL(ufs_nvm_unregister);
+
 
 static ssize_t nvm_dev_attr_show(struct device *dev,
 				struct device_attribute *dattr, char *page)
@@ -883,7 +1051,6 @@ void ufs_nvm_unregister_sysfs(struct scsi_disk *sd)
 }
 EXPORT_SYMBOL(ufs_nvm_unregister_sysfs);
 
-
 int ufs_nvm_supported(u16 vendor_id)
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_supported(), started\n");
@@ -900,4 +1067,88 @@ int ufs_nvm_supported(u16 vendor_id)
 	return 0;		
 }
 EXPORT_SYMBOL(ufs_nvm_supported);
+
+struct scsi_disk *null_sd;
+
+static int __init null_lnvm_init(void) 
+{
+	struct scsi_device *sdev;
+	struct request_queue *rq;
+	struct gendisk *gd;
+
+	mutex_init(&lock);
+	nullnvm_major = register_blkdev(0, "nullnvm");
+	pr_info("LIGHTNVM_UFS: null_lnvm_init(), nullnvm_major = %#x\n", nullnvm_major);
+	
+	if (ufs_nvm_supported(UFS_VENDOR_CQU)) {
+		pr_info("LIGHTNVM_UFS: null_lnvm_init() ufs_nvm supported\n");
+		
+		null_sd = kzalloc(sizeof(struct scsi_disk), GFP_KERNEL);
+		if (!null_sd) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc scsi_disk failed\n");
+			return -EINVAL;
+		}
+		
+		gd = alloc_disk(16);
+		if (!gd) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc_disk failed\n");
+			return -EINVAL;
+		}
+
+		rq = blk_alloc_queue_node(GFP_KERNEL, NUMA_NO_NODE);
+		if (!rq) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc_queue failed\n");
+			return -EINVAL;
+		}
+
+		sdev = kzalloc(sizeof(struct scsi_device), GFP_ATOMIC);
+		if (!sdev) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() alloc scsi_device failed\n");
+			return -EINVAL;
+		}
+
+		ppa_cache = kmem_cache_create("ppa_cache", 64 * sizeof(u64), 0, 0, NULL);
+		if (!ppa_cache) {
+			pr_info("LIGHTNVM_UFS: null_lnvm_init() unable to create ppa cache\n");
+			return -ENOMEM;
+		}
+
+		sdev->request_queue = rq;
+		rq->queuedata = sdev;
+		gd->queue = rq;
+		memcpy(gd->disk_name, "mmp1", DISK_NAME_LEN);
+
+		null_sd->device = sdev;
+		null_sd->disk = gd;
+		
+		pr_info("LIGHTNVM_UFS: null_lnvm_init() begin ufs_nvm_register\n");
+		ufs_nvm_register(null_sd, "mmp");
+		mutex_lock(&lock);
+		list_add_tail(&sdev->siblings, &nullnvm_list);
+		mutex_unlock(&lock);
+		pr_info("LIGHTNVM_UFS: null_lnvm_init() begin ufs_nvm_register_sysfs\n");
+		//ufs_nvm_register_sysfs(null_sd);
+	}
+	pr_info("LIGHTNVM_UFS: null_lnvm_init() completed\n");
+	return 0;
+}
+
+static void __exit null_lnvm_exit(void)
+{
+
+	pr_info("LIGHTNVM_UFS: null_lnvm_exit()\n");
+	//ufs_nvm_unregister_sysfs(null_sd);
+	pr_info("LIGHTNVM_UFS: null_lnvm_exit() unregister_sysfs completed\n");
+	ufs_nvm_unregister(null_sd);
+
+	unregister_blkdev(nullnvm_major, "nullnvm");
+	kmem_cache_destroy(ppa_cache);
+	pr_info("LIGHTNVM_UFS: null_lnvm_exit() unregister completed\n");
+}
+
+module_init(null_lnvm_init);
+module_exit(null_lnvm_exit);
+
+MODULE_AUTHOR("Xiong Xiong <xxiong@cqu.edu.cn>");
+MODULE_LICENSE("GPL");
 

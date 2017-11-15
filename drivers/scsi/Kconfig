@@ -43,9 +43,12 @@ config SCSI_DMA
 	default n
 
 config SCSI_NULLDEV
-	bool
-	default y
-	depends on SCSI && SCSI_DMA
+	tristate "nulldev for drive lightnvm-ufs"
+	depends on SCSI
+
+config SCSI_NULLNVM
+	tristate "null lightnvm for drive lightnvm"
+	depends on NVM
 
 config SCSI_NETLINK
 	bool
