@@ -1034,23 +1034,24 @@ static const struct attribute_group nvm_dev_attr_group = {
 	.attrs		= nvm_dev_attrs,
 };
 
+EXPORT_SYMBOL(ufs_nvm_register_sysfs);
 int ufs_nvm_register_sysfs(struct scsi_disk *sd)
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_register_sysfs(), started\n");
 	return sysfs_create_group(&disk_to_dev(sd->disk)->kobj, &nvm_dev_attr_group);
 	pr_info("LIGHTNVM_UFS: ufs_nvm_register_sysfs(), completed\n");
 }
-EXPORT_SYMBOL(ufs_nvm_register_sysfs);
 
 
+EXPORT_SYMBOL(ufs_nvm_unregister_sysfs);
 void ufs_nvm_unregister_sysfs(struct scsi_disk *sd)
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister_sysfs(), started\n");
 	sysfs_remove_group(&disk_to_dev(sd->disk)->kobj, &nvm_dev_attr_group);
 	pr_info("LIGHTNVM_UFS: ufs_nvm_unregister_sysfs(), completed\n");
 }
-EXPORT_SYMBOL(ufs_nvm_unregister_sysfs);
 
+EXPORT_SYMBOL(ufs_nvm_supported);
 int ufs_nvm_supported(u16 vendor_id)
 {
 	pr_info("LIGHTNVM_UFS: ufs_nvm_supported(), started\n");
@@ -1066,7 +1067,6 @@ int ufs_nvm_supported(u16 vendor_id)
 	pr_info("LIGHTNVM_UFS: ufs_nvm_supported(), current device is %x\n", vendor_id);
 	return 0;		
 }
-EXPORT_SYMBOL(ufs_nvm_supported);
 
 struct scsi_disk *null_sd;
 
@@ -1075,6 +1075,8 @@ static int __init null_lnvm_init(void)
 	struct scsi_device *sdev;
 	struct request_queue *rq;
 	struct gendisk *gd;
+
+	return 0;
 
 	mutex_init(&lock);
 	nullnvm_major = register_blkdev(0, "nullnvm");
@@ -1135,6 +1137,7 @@ static int __init null_lnvm_init(void)
 
 static void __exit null_lnvm_exit(void)
 {
+	return;
 
 	pr_info("LIGHTNVM_UFS: null_lnvm_exit()\n");
 	//ufs_nvm_unregister_sysfs(null_sd);
